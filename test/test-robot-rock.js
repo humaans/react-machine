@@ -3,7 +3,15 @@
 const test = require('ava')
 const { createMachine } = require('..')
 
-test('a simple machine', (t) => {
+test('empty machine', (t) => {
+  const machine1 = createMachine()
+  t.deepEqual(machine1.current, { name: null, context: {} })
+
+  const machine2 = createMachine(() => {})
+  t.deepEqual(machine2.current, { name: null, context: {} })
+})
+
+test('simple machine', (t) => {
   const machine = createMachine(({ state, transition }) => {
     state('initial', transition('go', 'final'))
     state('final')
@@ -24,14 +32,14 @@ test('a simple machine', (t) => {
             event: 'go',
             target: 'final',
             guards: [],
-            actions: [],
             reducers: [],
+            actions: [],
           },
         ],
       },
       immediates: [],
-      actions: [],
       reducers: [],
+      actions: [],
       effects: [],
       invokes: [],
     },
@@ -39,8 +47,8 @@ test('a simple machine', (t) => {
       name: 'final',
       transitions: {},
       immediates: [],
-      actions: [],
       reducers: [],
+      actions: [],
       effects: [],
       invokes: [],
     },
@@ -57,10 +65,11 @@ test('a simple machine', (t) => {
   t.is(machine.current.final, true)
 })
 
-test.only('a complex machine', (t) => {
+test('complex machine', (t) => {
   const set = (key, val) => (ctx) => ((ctx[key] = val), ctx)
+  const assign = (ctx, { type, ...data }) => ({ ...ctx, ...data })
 
-  const machine = createMachine(({ state, transition, immediate, assign }) => {
+  const machine = createMachine(({ state, transition, immediate }) => {
     state('initial', transition('go', 'second', { reduce: assign }))
     state('second', immediate('third'))
     state(
@@ -103,34 +112,89 @@ test.only('a complex machine', (t) => {
   t.is(machine.current.final, true)
 })
 
-test.skip('empty machine', (t) => {})
+test.skip('initial context', (t) => {})
+test.skip('transition guard', (t) => {})
+test.skip('transition reduce', (t) => {})
+test.skip('transition action', (t) => {})
+test.skip('transition assign', (t) => {})
+test.skip('state assign', (t) => {})
+test.skip('state reduce', (t) => {})
+test.skip('state action', (t) => {})
+test.skip('state effect', (t) => {})
+test.skip('state exit', (t) => {})
 
-// const machine = createMachine((machine) => {
-//   const { state, transition, immediate, invoke } = machine
+test('assign', (t) => {
+  const x = true
+  const y = { z: 'foo' }
+  const z = (d) => {
+    for (const key of Object.keys(d)) {
+      d[key] = 'prefix' + d[key]
+    }
+    return d
+  }
 
-//   state('loading',
-//     transition('assign', 'loading', { reduce: assign })
-//     immediate('edit', { guard: isSuccess })
-//     immediate('close', { guard: isError, action: showLoadingError })
-//   )
+  const machine = createMachine(({ state, transition, immediate }) => {
+    state('a', transition('go', 'b', { assign: [x, y, z] }))
+    state('b')
+  })
 
-//   state('edit',
-//     transition('save', 'saving', { reduce: clearError })
-//     transition('assign', 'edit', { reduce: assign })
-//     transition('close', 'close'),
-//     machine('x', () => {
-//       state('1', transition())
-//       state('2')
-//     })
-//   )
+  t.is(machine.current.name, 'a')
+  t.deepEqual(machine.current.context, {})
 
-//   state('saving',
-//     invoke(save)
-//     transition('done', 'close', { reduce: storeTypes })
-//     transition('error', 'edit', { reduce: assign })
-//     transition('assign', 'saving', { reduce: assign })
-//     transition('close', 'close')
-//   )
+  machine.send({ type: 'go', x: 1, y: 2 })
+  t.is(machine.current.name, 'b')
+  t.deepEqual(machine.current.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
+})
 
-//   state('close', invoke(close), { reduce: foo, action: bar })
-// })
+test('invoke', async (t) => {
+  const machine = createMachine(({ state, transition, immediate }) => {
+    state('a', transition('go', 'b'))
+    state(
+      'b',
+      { invoke: save },
+      transition('done', 'c', { assign: true }, { assign: { error: null } }),
+      transition('error', 'a', { assign: true })
+    )
+    state('c')
+  })
+
+  async function save(context) {
+    if (context.error) return { id: 1, name: 'hello' }
+    throw new Error('Fails the first time')
+  }
+
+  t.is(machine.current.name, 'a')
+  t.deepEqual(machine.current.context, {})
+
+  machine.send('go')
+  t.is(machine.current.name, 'b')
+  t.deepEqual(machine.current.context, {})
+
+  let tick = new Promise((resolve) => {
+    const dispose = machine.subscribe((curr) => {
+      resolve(curr)
+      dispose()
+    })
+  })
+
+  machine.flushEffects()
+
+  t.is(await tick, machine.current)
+  t.is(machine.current.name, 'a')
+  t.is(machine.current.context.error.message, 'Fails the first time')
+
+  machine.send('go')
+
+  tick = new Promise((resolve) => {
+    const dispose = machine.subscribe((curr) => {
+      resolve(curr)
+      dispose()
+    })
+  })
+
+  machine.flushEffects()
+
+  t.is(await tick, machine.current)
+  t.is(machine.current.name, 'c')
+  t.deepEqual(machine.current.context, { data: { id: 1, name: 'hello' }, error: null })
+})
