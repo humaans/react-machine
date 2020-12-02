@@ -1,0 +1,9 @@
+dist
+coverage
+.nyc_output
+docs/public
+docs/static/js/*.min.js
+docs/static/css/*.min.css
+
+docs/layouts/index.html
+docs/layouts/*

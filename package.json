@@ -1,0 +1,43 @@
+{
+  "name": "robot-rock",
+  "version": "1.0.0",
+  "description": "A lightweight state machine for React applications",
+  "main": "index.js",
+  "scripts": {
+    "test": "healthier && prettier --check '**/*.{js,css,yml}' && nyc ava",
+    "format": "prettier --write '**/*.{js,css,yml}'",
+    "coverage": "nyc --reporter=html ava",
+    "build": "node ./tasks/build.js",
+    "watch": "node ./tasks/build.js -w",
+    "version": "npm run build",
+    "release": "np",
+    "release:beta": "np --tag=beta",
+    "release:docs": "hugo -s docs && gh-pages -d docs/public"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "ava": "^3.13.0",
+    "healthier": "^4.0.0",
+    "np": "^7.0.0",
+    "nyc": "^15.1.0",
+    "prettier": "^2.2.1"
+  },
+  "sideEffects": false,
+  "healthier": {
+    "ignore": [
+      "docs/static/*.min*"
+    ]
+  },
+  "ava": {
+    "serial": true,
+    "files": [
+      "test/test-*.js"
+    ],
+    "timeout": "30s"
+  },
+  "np": {
+    "releaseDraft": false
+  }
+}

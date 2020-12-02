@@ -1,0 +1,7 @@
+.DS_Store
+.nyc_output
+node_modules
+coverage
+dist
+docs/public
+docs/resources/_gen
