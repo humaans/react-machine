@@ -1,3 +1,2 @@
-const { createMachine } = require('./lib/core')
-
-module.exports.createMachine = createMachine
+export { createMachine } from './lib/core'
+export { useMachine } from './lib/react'

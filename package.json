@@ -2,7 +2,27 @@
   "name": "robot-rock",
   "version": "1.0.0",
   "description": "A lightweight state machine for React applications",
+  "keywords": [
+    "react",
+    "state",
+    "effects",
+    "react hook",
+    "state machine",
+    "finite state machine",
+    "finite automata"
+  ],
   "main": "index.js",
+  "exports": {
+    "import": "./index.js"
+  },
+  "types": "./index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "lib",
+    "LICENSE.md",
+    "index.js",
+    "README.md"
+  ],
   "scripts": {
     "test": "healthier && prettier --check '**/*.{js,css,yml}' && nyc ava",
     "format": "prettier --write '**/*.{js,css,yml}'",
@@ -12,19 +32,25 @@
     "version": "npm run build",
     "release": "np",
     "release:beta": "np --tag=beta",
-    "release:docs": "hugo -s docs && gh-pages -d docs/public"
+    "release:docs": "hugo -s docs && gh-pages -d docs/public",
+    "types": "tsc"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Karolis Narkevicius <hello@kn8.lt>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KidkArolis/robot-rock.git"
+  },
+  "license": "MIT",
   "dependencies": {},
   "devDependencies": {
+    "@skypack/package-check": "^0.2.2",
     "ava": "^3.13.0",
     "healthier": "^4.0.0",
     "np": "^7.0.0",
     "nyc": "^15.1.0",
-    "prettier": "^2.2.1"
+    "prettier": "^2.2.1",
+    "typescript": "^4.1.2"
   },
-  "sideEffects": false,
   "healthier": {
     "ignore": [
       "docs/static/*.min*"
