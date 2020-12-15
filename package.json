@@ -1,7 +1,29 @@
 {
-  "name": "robot-rock",
+  "name": "react-machine",
   "version": "1.0.0",
   "description": "A lightweight state machine for React applications",
+  "types": "./index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "*"
+  ],
+  "scripts": {
+    "test": "healthier && prettier --check '**/*.{js,css,yml}' && nyc ava && npm run package-check",
+    "format": "prettier --write '**/*.{js,css,yml}'",
+    "package-check": "npm run build && cd dist && package-check",
+    "coverage": "nyc --reporter=html ava",
+    "build": "node ./build.js",
+    "version": "npm run build",
+    "release": "np --contents dist",
+    "release-beta": "np --tag=beta --contents=dist",
+    "types": "tsc"
+  },
+  "license": "MIT",
+  "author": "Karolis Narkevicius <hello@kn8.lt>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/humaans/react-machine.git"
+  },
   "keywords": [
     "react",
     "state",
@@ -11,57 +33,32 @@
     "finite state machine",
     "finite automata"
   ],
-  "main": "index.js",
-  "exports": {
-    "import": "./index.js"
-  },
-  "types": "./index.d.ts",
-  "sideEffects": false,
-  "files": [
-    "lib",
-    "LICENSE.md",
-    "index.js",
-    "README.md"
-  ],
-  "scripts": {
-    "test": "healthier && prettier --check '**/*.{js,css,yml}' && nyc ava",
-    "format": "prettier --write '**/*.{js,css,yml}'",
-    "coverage": "nyc --reporter=html ava",
-    "build": "node ./tasks/build.js",
-    "watch": "node ./tasks/build.js -w",
-    "version": "npm run build",
-    "release": "np",
-    "release:beta": "np --tag=beta",
-    "release:docs": "hugo -s docs && gh-pages -d docs/public",
-    "types": "tsc"
-  },
-  "author": "Karolis Narkevicius <hello@kn8.lt>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/KidkArolis/robot-rock.git"
-  },
-  "license": "MIT",
   "dependencies": {},
   "devDependencies": {
+    "@babel/cli": "^7.12.10",
+    "@babel/core": "^7.12.10",
+    "@babel/plugin-transform-react-jsx": "^7.12.10",
+    "@babel/register": "^7.12.10",
     "@skypack/package-check": "^0.2.2",
     "ava": "^3.13.0",
+    "esm": "^3.2.25",
     "healthier": "^4.0.0",
+    "jsdom": "^16.4.0",
     "np": "^7.0.0",
     "nyc": "^15.1.0",
     "prettier": "^2.2.1",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
     "typescript": "^4.1.2"
   },
-  "healthier": {
-    "ignore": [
-      "docs/static/*.min*"
-    ]
-  },
   "ava": {
-    "serial": true,
     "files": [
       "test/test-*.js"
     ],
-    "timeout": "30s"
+    "require": [
+      "esm",
+      "@babel/register"
+    ]
   },
   "np": {
     "releaseDraft": false

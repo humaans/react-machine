@@ -1,7 +1,7 @@
 /* eslint-disable no-sequences */
 
-const test = require('ava')
-const { createMachine } = require('..')
+import test from 'ava'
+import { createMachine } from '../lib/index.js'
 
 test('empty machine', (t) => {
   const machine1 = createMachine()
