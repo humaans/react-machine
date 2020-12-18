@@ -1,21 +1,30 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/324440/102627697-77e2d980-4140-11eb-9a57-60826ce2ee43.png" alt="react machine logo, a man with an open head with a state chart inside" title="react-machine">
+  <img width="400" src="https://user-images.githubusercontent.com/324440/102627697-77e2d980-4140-11eb-9a57-60826ce2ee43.png" alt="react machine logo, a man with an open head with a state chart inside" title="react-machine">
 </p>
 
 <h4 align="center">State machines with reducers, actions, effects, hierarchy and parallel states for React</h4>
 <br />
 
-A state machine hook for React applications. When `useState` or `useReducer` is not enough, use `useMachine` to express more complex component state including async effects.
+A state machine hook for React applications. When `useState` or `useReducer` is not enough, use `useMachine` to express more complex component state including running async effects.
 
-Very much inspired by [Robot](https://thisrobot.life/) and [XState](https://xstate.js.org/) - thank you for great libraries 🙏.
+Very much inspired by [Robot](https://thisrobot.life/) and [XState](https://xstate.js.org/) - thank you for really great libraries 🙏
 
 Differences from the above libraries:
 
-// TODO expand
+Comparison to [Robot](https://thisrobot.life/):
 
-- API similar to Robot, but instead of importing every helper they are either passed in to the machine factory function or are passed as options.
-- Behaviour closer to XState with enter/exit reducers and actions and effects (activities in XState), things not available in Robot.
-- All transitions are internal, which means re-entering the state (e.g. after a component rerenders with new props, which are passed to context) does not trigger enter actions, reducers, invokes and effects.
+- `react-machine` API is heavily inspired by robot but designed in a way to avoid having to include many imports every time, only `useMachine` is necessary
+- unlike Robot, `react-machine` supports nested and parallel state nodes, internal transitions, custom effects
+- unlike Robot, `react-machine` is currently designed primarily for React and integrates into React using `useReducer` for storing state and handling events and `useEffect` for running and cleaning up effects
+
+Comparison to [XState](https://xstate.js.org/):
+
+- the primary motivation for `react-machine` was to create a powerful state chart library, with a smaller surface area and smaller implementation, compared to XState
+- `react-machine` supports the key state chart features found in XState - hierarchical and parallel state notes, internal and external transitions, reducers, actions, actitivies (called `effects` in `react-machine`)
+- `react-machine` does not support extracuricular features such as actors or machines talking to each other, ability to serialize machines to [SCXML](https://www.w3.org/TR/scxml/)
+- `react-machine` does not have full [SCXML](https://www.w3.org/TR/scxml/) compatibility in an attempt to simplify the usage for common UI development use cases
+- currently no state chart visualisation is available, but could be implemented in the future
+- unlike XState, `react-machine` is currently designed primarily for React and integrates into React using `useReducer` for storing state and handling events and `useEffect` for running and cleaning up effects
 
 ## Example
 
