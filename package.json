@@ -2,7 +2,7 @@
   "name": "react-machine",
   "version": "1.0.0",
   "description": "A lightweight state machine for React applications",
-  "types": "./index.d.ts",
+  "types": "./types/index.d.ts",
   "sideEffects": false,
   "files": [
     "*"
