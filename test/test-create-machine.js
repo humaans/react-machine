@@ -82,19 +82,19 @@ test('complex machine', (t) => {
   const set = (key, val) => (ctx) => ((ctx[key] = val), ctx)
   const assign = (ctx, { type, ...data }) => ({ ...ctx, ...data })
 
-  const machine = createMachine(({ state, transition, immediate, enter, exit }) => {
-    state('initial', transition('go', 'second', { reduce: assign }))
+  const machine = createMachine(({ state, transition, internal, immediate, enter, exit }) => {
+    state('initial', transition('goToSecond', 'second', { reduce: assign }))
     state('second', immediate('third'))
     state(
       'third',
       immediate('final', { guard: () => false }),
-      transition('go', 'fourth', { reduce: assign })
+      transition('goToFourth', 'fourth', { reduce: assign })
     )
     state(
       'fourth',
       enter({ effect: ping }),
-      transition('assign', 'fourth', { reduce: assign }),
-      transition('go', 'final', { reduce: assign }),
+      internal('assign', { reduce: assign }),
+      transition('goToFinal', 'final', { reduce: assign }),
       exit({ assign: { fourthExited: 'pong' } })
     )
     state('final', enter({ reduce: set('y', 2) }))
@@ -112,15 +112,15 @@ test('complex machine', (t) => {
 
   t.is(machine.state.name, 'initial')
   t.deepEqual(machine.state.context, {})
-  machine.send({ type: 'go', x: 1 })
+  machine.send({ type: 'goToSecond', x: 1 })
   t.is(machine.state.name, 'third')
   t.deepEqual(machine.state.context, { x: 1 })
 
-  machine.send({ type: 'go', x: 2 })
+  machine.send({ type: 'goToFourth', x: 2 })
   t.is(machine.state.name, 'fourth')
   t.deepEqual(machine.state.context, { x: 2, fourthEntered: 'ping' })
 
-  machine.send({ type: 'go', x: 3 })
+  machine.send({ type: 'goToFinal', x: 3 })
   t.is(machine.state.name, 'final')
   t.deepEqual(machine.state.context, { x: 3, y: 2, fourthEntered: 'ping', fourthExited: 'pong' })
   t.is(machine.state.final, true)
@@ -140,7 +140,7 @@ test.skip('state exit', (t) => {})
 test('assign', (t) => {
   const x = true
   const y = { z: 'foo' }
-  const z = (d) => {
+  const z = (ctx, d) => {
     for (const key of Object.keys(d)) {
       d[key] = 'prefix' + d[key]
     }
