@@ -1,4 +1,9 @@
-# react-machine
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/324440/102627697-77e2d980-4140-11eb-9a57-60826ce2ee43.png" alt="react machine logo, a man with an open head with a state chart inside" title="react-machine">
+</p>
+
+<h4 align="center">State machines with reducers, actions, effects, hierarchy and parallel states for React</h4>
+<br />
 
 A state machine hook for React applications. When `useState` or `useReducer` is not enough, use `useMachine` to express more complex component state including async effects.
 
@@ -116,15 +121,14 @@ function Remove() {}
 - [x] add internal() transitions that transition to itself, useful for assign and other bits
 - [x] find a better name for "transforms"
 - [x] add prev state (aka history)
+- [x] protect promises from sending events if they were cleaned up
 
 - [ ] experiment with hierarchy (!!!!!!!!!!!)
 
-- [ ] why are errors thrown in effect dipose not handled?
-- [ ] possibly convert assigns and actions into reducers, so they're applied in order
-- [ ] possibly move the code into standalone functions and pass machine every time
-- [ ] add React tests
+- [ ] convert actions into reducers, so they're applied in order
 - [ ] complete the tests
 - [ ] add debug logging option
-- [ ] protect promises from sending events if they were cleaned up
 - [ ] write proper typings
+- [ ] why are errors thrown in effect dipose not handled?
+- [ ] write a thorough readme
 - [ ] release!
