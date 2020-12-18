@@ -4,6 +4,8 @@ const machine = ({ state, enter, transition, immediate, internal, parallel }) =>
     internal('assign', { assign: true })
 
     state('loading', () => {
+      enter({ effect: 'longRunning' })
+
       state('a', () => {
         state('pending', transition('next', 'b'))
         // state('ready') // final of a, because can only transition internally with assign

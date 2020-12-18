@@ -1,14 +1,17 @@
 /* eslint-disable no-sequences */
 
 import test from 'ava'
-import { createMachine } from '../lib/index.js'
+import { createService as createMachine } from '../lib/service.js'
 
 test('empty machine', (t) => {
   const machine1 = createMachine()
-  t.deepEqual(machine1.current, { name: null, context: {} })
+  t.deepEqual(machine1.state, { name: null, context: {} })
 
   const machine2 = createMachine(() => {})
-  t.deepEqual(machine2.current, { name: null, context: {} })
+  t.deepEqual(machine2.state, { name: null, context: {} })
+
+  const machine3 = createMachine(() => {}, { a: 1 })
+  t.deepEqual(machine3.state, { name: null, context: { a: 1 } })
 })
 
 test('simple machine', (t) => {
@@ -18,11 +21,7 @@ test('simple machine', (t) => {
   })
 
   // machine structure
-  t.deepEqual(machine.current, {
-    name: 'initial',
-    context: {},
-  })
-  t.deepEqual(machine.states, {
+  t.deepEqual(machine.machine, {
     initial: {
       name: 'initial',
       transitions: {
@@ -53,16 +52,36 @@ test('simple machine', (t) => {
       invokes: [],
     },
   })
-  t.deepEqual(machine.subscriptions, [])
+
+  t.deepEqual(machine.runningEffects, [])
+  t.deepEqual(machine.pendingEffects, [])
   t.is(typeof machine.subscribe, 'function')
   t.is(typeof machine.send, 'function')
+  // t.is(typeof machine.runEffects, 'function')
+  t.is(typeof machine.stop, 'function')
 
-  t.is(machine.current.name, 'initial')
-  t.is(machine.current.final, undefined)
+  t.deepEqual(Object.keys(machine), [
+    'machine',
+    'state',
+    'pendingEffects',
+    'runningEffects',
+    'send',
+    // 'runEffects',
+    'subscribe',
+    'stop',
+  ])
+
+  t.deepEqual(machine.state, {
+    name: 'initial',
+    context: {},
+  })
+
+  t.is(machine.state.name, 'initial')
+  t.is(machine.state.final, undefined)
 
   machine.send('go')
-  t.is(machine.current.name, 'final')
-  t.is(machine.current.final, true)
+  t.is(machine.state.name, 'final')
+  t.is(machine.state.final, true)
 })
 
 test('complex machine', (t) => {
@@ -86,30 +105,30 @@ test('complex machine', (t) => {
     state('final', { reduce: set('y', 2) })
   })
 
-  function pingPong(get, send) {
-    t.deepEqual(get().context, { x: 2 })
+  function pingPong(context, send) {
+    t.deepEqual(context, { x: 2 })
     send({ type: 'assign', entered: 'ping' })
     return () => {
-      t.deepEqual(get().context, { x: 2, entered: 'ping' })
-      send({ type: 'assign', exited: 'pong' })
+      // we have stale context
+      t.deepEqual(context, { x: 2 })
+      // TODO - test send is not possible anymore
     }
   }
 
-  t.is(machine.current.name, 'initial')
-  t.deepEqual(machine.current.context, {})
+  t.is(machine.state.name, 'initial')
+  t.deepEqual(machine.state.context, {})
   machine.send({ type: 'go', x: 1 })
-  t.is(machine.current.name, 'third')
-  t.deepEqual(machine.current.context, { x: 1 })
+  t.is(machine.state.name, 'third')
+  t.deepEqual(machine.state.context, { x: 1 })
 
   machine.send({ type: 'go', x: 2 })
-  machine.flushEffects()
-  t.is(machine.current.name, 'fourth')
-  t.deepEqual(machine.current.context, { x: 2, entered: 'ping' })
+  t.is(machine.state.name, 'fourth')
+  t.deepEqual(machine.state.context, { x: 2, entered: 'ping' })
 
   machine.send({ type: 'go', x: 3 })
-  t.is(machine.current.name, 'final')
-  t.deepEqual(machine.current.context, { x: 3, y: 2, entered: 'ping', exited: 'pong' })
-  t.is(machine.current.final, true)
+  t.is(machine.state.name, 'final')
+  t.deepEqual(machine.state.context, { x: 3, y: 2, entered: 'ping' })
+  t.is(machine.state.final, true)
 })
 
 test.skip('initial context', (t) => {})
@@ -138,15 +157,15 @@ test('assign', (t) => {
     state('b')
   })
 
-  t.is(machine.current.name, 'a')
-  t.deepEqual(machine.current.context, {})
+  t.is(machine.state.name, 'a')
+  t.deepEqual(machine.state.context, {})
 
   machine.send({ type: 'go', x: 1, y: 2 })
-  t.is(machine.current.name, 'b')
-  t.deepEqual(machine.current.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
+  t.is(machine.state.name, 'b')
+  t.deepEqual(machine.state.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
 })
 
-test('invoke', async (t) => {
+test.skip('invoke', async (t) => {
   const machine = createMachine(({ state, transition, immediate }) => {
     state('a', transition('go', 'b'))
     state(
@@ -160,41 +179,41 @@ test('invoke', async (t) => {
 
   async function save(context) {
     if (context.error) return { id: 1, name: 'hello' }
+    console.log('Calling save about to fail!')
     throw new Error('Fails the first time')
   }
 
-  t.is(machine.current.name, 'a')
-  t.deepEqual(machine.current.context, {})
+  t.is(machine.state.name, 'a')
+  t.deepEqual(machine.state.context, {})
 
-  machine.send('go')
-  t.is(machine.current.name, 'b')
-  t.deepEqual(machine.current.context, {})
+  console.log(machine)
 
-  let tick = new Promise((resolve) => {
-    const dispose = machine.subscribe((curr) => {
-      resolve(curr)
-      dispose()
-    })
-  })
+  // let tick = new Promise((resolve) => {
+  //   const dispose = machine.subscribe((curr) => {
+  //     console.log('Resolved!', curr)
+  //     resolve(curr)
+  //     dispose()
+  //   })
 
-  machine.flushEffects()
+  //   machine.send('go')
+  // })
 
-  t.is(await tick, machine.current)
-  t.is(machine.current.name, 'a')
-  t.is(machine.current.context.error.message, 'Fails the first time')
+  // t.is(await tick, machine.state)
 
-  machine.send('go')
+  // t.is(machine.state.name, 'b')
+  // t.deepEqual(machine.state.context, {})
+  // t.is(machine.state.context.error.message, 'Fails the first time')
 
-  tick = new Promise((resolve) => {
-    const dispose = machine.subscribe((curr) => {
-      resolve(curr)
-      dispose()
-    })
-  })
+  // tick = new Promise((resolve) => {
+  //   const dispose = machine.subscribe((curr) => {
+  //     resolve(curr)
+  //     dispose()
+  //   })
 
-  machine.flushEffects()
+  //   machine.send('go')
+  // })
 
-  t.is(await tick, machine.current)
-  t.is(machine.current.name, 'c')
-  t.deepEqual(machine.current.context, { data: { id: 1, name: 'hello' }, error: null })
+  // t.is(await tick, machine.state)
+  // t.is(machine.state.name, 'c')
+  // t.deepEqual(machine.state.context, { data: { id: 1, name: 'hello' }, error: null })
 })

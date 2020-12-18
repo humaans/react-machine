@@ -107,16 +107,27 @@ function Remove() {}
 - [x] immediate chains with invokes/effects (??)
 - [x] guards
 - [x] introduce assign: true, assign: { error: null }, assign: data => data2 as a shortcut
-- [ ] add prev state
-- [ ] pass context to assign
+
+- [x] separate machine (currently called states) from state
+- [ ] fix tests with the new structure
 - [ ] introduce enter/exit
-- [ ] why are errors thrown in effect dipose not handled?
+- [ ] rename applyEvent to transition (maybe)
+- [ ] reuse applyEvent instead of applyTransition in initialisation
 - [ ] add internal() transitions that transition to itself, useful for assign and other bits
+- [ ] pass context to assign
+- [ ] find a better name for "transforms"
+
+- [ ] experiment with hierarchy
+
+- [ ] add prev state (aka history)
+- [ ] why are errors thrown in effect dipose not handled?
 - [ ] possibly convert assigns and actions into reducers, so they're applied in order
 - [ ] dispose effects on component unmount
-- [ ] possibly add exit(), to complement the rest of on entry transforms
 - [ ] possibly move the code into standalone functions and pass machine every time
+
 - [ ] add React tests
 - [ ] complete the tests
 - [ ] add debug logging option
+- [ ] protect promises from sending events if they were cleaned up
+
 - [ ] release!

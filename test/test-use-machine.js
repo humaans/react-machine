@@ -3,7 +3,7 @@ import React from 'react'
 import { render } from 'react-dom'
 import { act } from 'react-dom/test-utils'
 import { JSDOM } from 'jsdom'
-import { useMachine } from '../lib/index.js'
+import { useMachine } from '../lib/hooks.js'
 
 test.serial('usage', async (t) => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>')
