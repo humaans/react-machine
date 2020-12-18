@@ -114,8 +114,8 @@ function Remove() {}
 - [x] reuse applyEvent instead of applyTransition in initialisation
 - [x] pass context to assign
 - [x] add internal() transitions that transition to itself, useful for assign and other bits
-- [ ] find a better name for "transforms"
-- [ ] add prev state (aka history)
+- [x] find a better name for "transforms"
+- [x] add prev state (aka history)
 
 - [ ] experiment with hierarchy (!!!!!!!!!!!)
 

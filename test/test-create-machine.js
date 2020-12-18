@@ -58,6 +58,7 @@ test('simple machine', (t) => {
   t.deepEqual(Object.keys(machine), [
     'machine',
     'state',
+    'prev',
     'pendingEffects',
     'runningEffects',
     'send',
@@ -174,7 +175,6 @@ test.skip('invoke', async (t) => {
 
   async function save(context) {
     if (context.error) return { id: 1, name: 'hello' }
-    console.log('Calling save about to fail!')
     throw new Error('Fails the first time')
   }
 
@@ -183,7 +183,6 @@ test.skip('invoke', async (t) => {
 
   let tick = new Promise((resolve) => {
     const dispose = machine.subscribe((curr) => {
-      console.log('Resolved!', curr)
       resolve(curr)
       dispose()
     })
