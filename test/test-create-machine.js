@@ -24,6 +24,8 @@ test('simple machine', (t) => {
   t.deepEqual(machine.machine, {
     initial: {
       name: 'initial',
+      enter: [],
+      exit: [],
       transitions: {
         go: [
           {
@@ -37,19 +39,13 @@ test('simple machine', (t) => {
         ],
       },
       immediates: [],
-      reducers: [],
-      actions: [],
-      effects: [],
-      invokes: [],
     },
     final: {
       name: 'final',
+      enter: [],
+      exit: [],
       transitions: {},
       immediates: [],
-      reducers: [],
-      actions: [],
-      effects: [],
-      invokes: [],
     },
   })
 
@@ -57,7 +53,6 @@ test('simple machine', (t) => {
   t.deepEqual(machine.pendingEffects, [])
   t.is(typeof machine.subscribe, 'function')
   t.is(typeof machine.send, 'function')
-  // t.is(typeof machine.runEffects, 'function')
   t.is(typeof machine.stop, 'function')
 
   t.deepEqual(Object.keys(machine), [
@@ -66,7 +61,6 @@ test('simple machine', (t) => {
     'pendingEffects',
     'runningEffects',
     'send',
-    // 'runEffects',
     'subscribe',
     'stop',
   ])
@@ -88,7 +82,7 @@ test('complex machine', (t) => {
   const set = (key, val) => (ctx) => ((ctx[key] = val), ctx)
   const assign = (ctx, { type, ...data }) => ({ ...ctx, ...data })
 
-  const machine = createMachine(({ state, transition, immediate }) => {
+  const machine = createMachine(({ state, transition, immediate, enter, exit }) => {
     state('initial', transition('go', 'second', { reduce: assign }))
     state('second', immediate('third'))
     state(
@@ -98,16 +92,17 @@ test('complex machine', (t) => {
     )
     state(
       'fourth',
-      { effect: pingPong },
+      enter({ effect: ping }),
       transition('assign', 'fourth', { reduce: assign }),
-      transition('go', 'final', { reduce: assign })
+      transition('go', 'final', { reduce: assign }),
+      exit({ assign: { fourthExited: 'pong' } })
     )
-    state('final', { reduce: set('y', 2) })
+    state('final', enter({ reduce: set('y', 2) }))
   })
 
-  function pingPong(context, send) {
+  function ping(context, send) {
     t.deepEqual(context, { x: 2 })
-    send({ type: 'assign', entered: 'ping' })
+    send({ type: 'assign', fourthEntered: 'ping' })
     return () => {
       // we have stale context
       t.deepEqual(context, { x: 2 })
@@ -123,11 +118,11 @@ test('complex machine', (t) => {
 
   machine.send({ type: 'go', x: 2 })
   t.is(machine.state.name, 'fourth')
-  t.deepEqual(machine.state.context, { x: 2, entered: 'ping' })
+  t.deepEqual(machine.state.context, { x: 2, fourthEntered: 'ping' })
 
   machine.send({ type: 'go', x: 3 })
   t.is(machine.state.name, 'final')
-  t.deepEqual(machine.state.context, { x: 3, y: 2, entered: 'ping' })
+  t.deepEqual(machine.state.context, { x: 3, y: 2, fourthEntered: 'ping', fourthExited: 'pong' })
   t.is(machine.state.final, true)
 })
 
@@ -171,7 +166,7 @@ test.skip('invoke', async (t) => {
     state(
       'b',
       { invoke: save },
-      transition('done', 'c', { assign: true }, { assign: { error: null } }),
+      transition('done', 'c', { assign: [true, { error: null }] }),
       transition('error', 'a', { assign: true })
     )
     state('c')
@@ -186,34 +181,32 @@ test.skip('invoke', async (t) => {
   t.is(machine.state.name, 'a')
   t.deepEqual(machine.state.context, {})
 
-  console.log(machine)
+  let tick = new Promise((resolve) => {
+    const dispose = machine.subscribe((curr) => {
+      console.log('Resolved!', curr)
+      resolve(curr)
+      dispose()
+    })
 
-  // let tick = new Promise((resolve) => {
-  //   const dispose = machine.subscribe((curr) => {
-  //     console.log('Resolved!', curr)
-  //     resolve(curr)
-  //     dispose()
-  //   })
+    machine.send('go')
+  })
 
-  //   machine.send('go')
-  // })
+  t.is(await tick, machine.state)
 
-  // t.is(await tick, machine.state)
+  t.is(machine.state.name, 'b')
+  t.deepEqual(machine.state.context, {})
+  t.is(machine.state.context.error.message, 'Fails the first time')
 
-  // t.is(machine.state.name, 'b')
-  // t.deepEqual(machine.state.context, {})
-  // t.is(machine.state.context.error.message, 'Fails the first time')
+  tick = new Promise((resolve) => {
+    const dispose = machine.subscribe((curr) => {
+      resolve(curr)
+      dispose()
+    })
 
-  // tick = new Promise((resolve) => {
-  //   const dispose = machine.subscribe((curr) => {
-  //     resolve(curr)
-  //     dispose()
-  //   })
+    machine.send('go')
+  })
 
-  //   machine.send('go')
-  // })
-
-  // t.is(await tick, machine.state)
-  // t.is(machine.state.name, 'c')
-  // t.deepEqual(machine.state.context, { data: { id: 1, name: 'hello' }, error: null })
+  t.is(await tick, machine.state)
+  t.is(machine.state.name, 'c')
+  t.deepEqual(machine.state.context, { data: { id: 1, name: 'hello' }, error: null })
 })
