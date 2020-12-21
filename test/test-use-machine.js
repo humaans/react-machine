@@ -123,7 +123,7 @@ test.serial('effects', (t) => {
       'counter',
       internal('assign', { assign: true }),
       enter({
-        effect: (context, send) => {
+        effect: (context, event, send) => {
           eff.push('started')
           return () => {
             eff.push('finished')

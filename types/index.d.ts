@@ -1,2 +1,2 @@
-export { createMachine } from "./lib/core";
-export { useMachine } from "./lib/react";
+export { createMachine } from './core'
+export { useMachine } from './react'

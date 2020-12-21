@@ -242,7 +242,7 @@ test('enter effect', async (t) => {
     state('c')
   })
 
-  function save(context, send) {
+  function save(context, event, send) {
     Promise.resolve('defer').then(() => {
       if (context.error) return send({ type: 'done', data: { id: 1, name: 'hello' } })
       send({ type: 'error', error: new Error('Fails the first time') })
@@ -420,8 +420,9 @@ test('complex machine', (t) => {
     state('final', enter({ reduce: set('y', 2) }))
   })
 
-  function ping(context, send) {
+  function ping(context, event, send) {
     t.deepEqual(context, { x: 2 })
+    t.deepEqual(event, { type: 'goToFourth', x: 2 })
     send({ type: 'assign', fourthEntered: 'ping' })
     return () => {
       // check that we have stale context

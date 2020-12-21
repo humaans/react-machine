@@ -257,7 +257,7 @@ If the guard condition fails, the transition is skipped when matching against th
 - [x] store running effects in a ref
 - [x] write a thorough readme
 - [x] complete the tests
-- [ ] effects should get event passed in
+- [x] effects should get event passed in
 - [ ] convert actions into reducers, so they're applied in order
 - [ ] add debug logging option
 - [ ] write proper typings
