@@ -21,7 +21,7 @@ Features include:
 - extend machines with hierarchical and parallel states _(coming in V2 in 2021)_
 - semantics modelled inline with the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
 
-#### Introductory example
+### Example
 
 ```js
 import React from 'react'
@@ -40,7 +40,8 @@ function machine({ state, transition, immediate, internal, enter }) {
     immediate('error', { guard: isError })
   )
 
-  state('retry',
+  state('error',
+    internal('assign', { assign: true }),
     transition('retry', 'loading', { action: retry })
   )
 
@@ -60,6 +61,10 @@ export function Component({ status, retry }) {
   return <button onClick={() => send('increment')}>{context.count}</button>
 }
 ```
+
+Also see:
+
+  * [Example: Form](examples/example-form.md)
 
 ## Acknowledgements
 
@@ -82,90 +87,6 @@ XState is the most powerful modern state chart / state machine implementation fo
 - related to the point above, full compatibility / serialisation to SCXML is a non goal for `react-machine`, SCXML (and it's interpration algorithm in particular) is only used to guide the implementation of `react-machine`
 - `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future
 - XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future (wanna work on it?)
-
-## Example
-
-This example demonstratates many of the benefits of using a state machine in React:
-
-- loading and error states are handled
-- processing states such as saving and removing are handled
-- when the form is closing, in case of animation, we can no longer submit the form, etc.
-- we separate all of the business logic from the components keeping them more readable
-- we can handle async imperative effects with ease, e.g. can't double submit the form, we handle both error and success, and so on, it makes you handle all of the edge cases
-
-```js
-import React from 'react'
-import { useMutation } from 'some-api-client'
-import { useMachine } from 'react-machine'
-
-const isLoadingSuccess = (ctx) => ctx.item.status === 'success'
-const isLoadingError = (ctx) => ctx.item.status === 'error'
-const showLoadingError = (ctx) => ctx.showToast('Failed to load the item')
-const save = (ctx, { values }) => ctx.save(ctx.item.id, values)
-const remove = (ctx, { values }) => ctx.remove(ctx.item.id)
-const close = (ctx) => ctx.onClose()
-
-const machine = ({ state, enter, transition, immediate, internal, assign }) => {
-  state(
-    'loading',
-    immediate('edit', { guard: isLoadingSuccess }),
-    immediate('closing', { guard: isLoadingError, action: showLoadingError }),
-    internal('assign', { reduce: assign })
-  )
-
-  state(
-    'edit',
-    transition('save', 'saving', { assign: { error: null } }),
-    transition('remove', 'remove', { assign: { error: null } }),
-    transition('close', 'closing'),
-    internal('assign', { reduce: assign })
-  )
-
-  state(
-    'saving',
-    enter({ invoke: save }),
-    transition('done', 'closing'),
-    transition('error', 'edit', { reduce: assign }),
-    transition('close', 'closing'),
-    internal('assign', { reduce: assign })
-  )
-
-  state(
-    'remove',
-    transition('confirm', 'removing'),
-    transition('close', 'edit', { assign: { error: null } }),
-    internal('assign', { reduce: assign })
-  )
-
-  state(
-    'removing',
-    enter({ invoke: remove }),
-    transition('done', 'closing'),
-    transition('error', 'remove', { reduce: assign }),
-    internal('assign', { reduce: assign })
-  )
-
-  state('closing', enter({ action: close }))
-}
-
-export function EditForm({ item, showToast, onClose }) {
-  const { save, remove } = useMutation('api/items')
-  const [state, send] = useMachine(machine, { item, showToast, save, remove, onClose })
-
-  const shared = { state, send }
-
-  const { prev } = state
-  const name = state.name === 'closing' ? prev.name : state.name
-
-  if (name === 'loading') return <Loading {...shared} />
-  if (name === 'edit' || name === 'saving') return <Edit {...shared} />
-  if (name === 'remove' || name === 'removing') return <Remove {...shared} />
-}
-
-function Loading() {}
-function Edit() {}
-function Remove() {}
-```
 
 ## API
 
