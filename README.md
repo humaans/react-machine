@@ -111,6 +111,8 @@ function Remove() {}
 
 ### TODO
 
+#### V1
+
 - [x] es6 modules
 - [x] snowpack "good package mode"
 - [x] invoke
@@ -131,9 +133,8 @@ function Remove() {}
 - [x] find a better name for "transforms"
 - [x] add prev state (aka history)
 - [x] protect promises from sending events if they were cleaned up
-
-- [ ] experiment with hierarchy (!!!!!!!!!!!)
-
+- [x] store running effects in a ref
+- [ ] effects should get event passed in
 - [ ] convert actions into reducers, so they're applied in order
 - [ ] complete the tests
 - [ ] add debug logging option
@@ -141,3 +142,7 @@ function Remove() {}
 - [ ] why are errors thrown in effect dipose not handled?
 - [ ] write a thorough readme
 - [ ] release!
+
+#### V2
+
+- [ ] add hierarchy and parallelism (!!!!!!!!!!!)
