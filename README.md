@@ -261,7 +261,6 @@ If the guard condition fails, the transition is skipped when matching against th
 - [ ] convert actions into reducers, so they're applied in order
 - [ ] add debug logging option
 - [ ] write proper typings
-- [ ] why are errors thrown in effect dispose not handled?
 - [ ] release!
 
 #### V2
