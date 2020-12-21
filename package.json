@@ -34,6 +34,9 @@
     "finite automata"
   ],
   "dependencies": {},
+  "peerDependencies": {
+    "react": "^17.0.1"
+  },
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/core": "^7.12.10",
