@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="400" src="https://user-images.githubusercontent.com/324440/102627697-77e2d980-4140-11eb-9a57-60826ce2ee43.png" alt="react machine logo, a man with an open head with a state chart inside" title="react-machine">
+  <img width="360" src="https://user-images.githubusercontent.com/324440/102627697-77e2d980-4140-11eb-9a57-60826ce2ee43.png" alt="react machine logo, a man with an open head with a state chart inside" title="react-machine">
 </p>
 
 <h4 align="center">State machines with reducers, actions, effects, hierarchy and parallel states for React</h4>
