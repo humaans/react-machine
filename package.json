@@ -11,7 +11,7 @@
     "test": "healthier && prettier --check '**/*.{js,css,yml}' && ava && npm run package-check",
     "format": "prettier --write '**/*.{js,css,yml}'",
     "package-check": "npm run build && cd dist && package-check",
-    "coverage": "nyc -i esm -i @babel/register --reporter=html ava",
+    "coverage": "c8 --reporter=html ava",
     "build": "node ./build.js",
     "watch": "nodemon --ignore dist ./build.js",
     "version": "npm run build",
@@ -41,16 +41,16 @@
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/core": "^7.12.10",
+    "@babel/plugin-transform-modules-commonjs": "^7.12.1",
     "@babel/plugin-transform-react-jsx": "^7.12.10",
     "@babel/register": "^7.12.10",
-    "@istanbuljs/nyc-config-babel": "^3.0.0",
     "@skypack/package-check": "^0.2.2",
     "ava": "^3.13.0",
+    "c8": "^7.3.5",
     "esm": "^3.2.25",
     "healthier": "^4.0.0",
     "jsdom": "^16.4.0",
     "np": "^7.0.0",
-    "nyc": "^15.1.0",
     "prettier": "^2.2.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -61,7 +61,6 @@
       "test/test-*.js"
     ],
     "require": [
-      "esm",
       "@babel/register"
     ]
   },
