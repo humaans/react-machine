@@ -10,17 +10,16 @@ When `useState` or `useReducer` is not enough, the `useMachine` hook can be used
 Features include:
 
 - a single `useMachine` hook for declaratively describing state machines
-- `state` nodes
-- `transition`s between the states
-- `immediate` transitions with `guard`s
+- define `states` and `transitions` between those states
+- `immediate` transitions with `guards`
 - `internal` transitions, useful for updating context based on changing props
-- a variety of hooks supported as part of taking transitions: `reduce`, `assign`, `action`, `guard`
-- state `enter` and `exit` hooks: `reduce`, `assign`, `action`, `invoke`, `effect`
+- a variety of transition hooks available - `reduce`, `assign`, `action`, `guard`
+- state `enter` and `exit` hooks - `reduce`, `assign`, `action`, `invoke`, `effect`
 - out of the box support for async functions with `invoke`
-- define custom effects with `effect`
-- internally state is stored in `useReducer`, transitions applied via `dispatch` and effects are applied via `useEffect`, making this a React native state machine implementation, built with concurrent mode in mind
-- extend machines with hierarchical and parallel states _(coming in V2 some time in 2021)_
-- semantics modelled closely with inline with the [SCXML](https://www.w3.org/TR/scxml/) spec
+- custom side effects with `effect`
+- `useReducer` used for storing state internally, with transitions applied using `dispatch` and effects using `useEffect`, making this a native React state machine implementation, built with concurrent mode in mind
+- extend machines with hierarchical and parallel states _(coming in V2 in 2021)_
+- semantics modelled inline with the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
 
 #### Introductory example
 
