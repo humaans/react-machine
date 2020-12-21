@@ -353,7 +353,6 @@ test('simple machine', (t) => {
             target: 'final',
             guards: [],
             reducers: [],
-            actions: [],
           },
         ],
       },
