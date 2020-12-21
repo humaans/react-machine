@@ -1,7 +1,10 @@
-.PHONY: build release release-beta test coverage
+.PHONY: build watch release release-beta test coverage
 
 build:
 	@npm run build
+
+watch:
+	@npm run watch
 
 release:
 	@npm run release
