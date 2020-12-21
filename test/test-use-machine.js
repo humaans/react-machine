@@ -60,6 +60,113 @@ test.serial('usage', async (t) => {
   t.is(document.querySelector('#count').innerHTML, 'Count: 4')
 })
 
+test.serial('changing props automatically send assign event', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  const machine = ({ state, transition, immediate, internal }) => {
+    state('initial', immediate('counter'))
+    state(
+      'counter',
+      internal('assign', { assign: true }),
+      internal('changeThing', { assign: true })
+    )
+  }
+
+  function App({ thing }) {
+    const [{ name, context }, send] = useMachine(machine, { thing })
+    return (
+      <>
+        <div id='state'>State: {name}</div>
+        <div id='count'>Thing: {context.thing}</div>
+        <button id='changeThing' onClick={() => send({ type: 'changeThing', thing: 'c', x: 1 })} />
+      </>
+    )
+  }
+
+  act(() => {
+    render(<App thing='a' />, root)
+  })
+
+  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is(document.querySelector('#count').innerHTML, 'Thing: a')
+
+  act(() => {
+    render(<App thing='b' />, root)
+  })
+
+  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is(document.querySelector('#count').innerHTML, 'Thing: b')
+
+  click(dom, document.querySelector('#changeThing'))
+
+  act(() => {
+    render(<App thing='b' />, root)
+  })
+
+  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is(document.querySelector('#count').innerHTML, 'Thing: c')
+})
+
+test.serial('effects', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  const eff = []
+
+  const machine = ({ state, enter, internal }) => {
+    state(
+      'counter',
+      internal('assign', { assign: true }),
+      enter({
+        effect: (context, send) => {
+          eff.push('started')
+          return () => {
+            eff.push('finished')
+          }
+        },
+      })
+    )
+  }
+
+  function App({ thing }) {
+    const [{ name }] = useMachine(machine, { thing })
+    return (
+      <>
+        <div id='state'>State: {name}</div>
+        <div id='count'>Effect: {eff.join(', ')}</div>
+      </>
+    )
+  }
+
+  act(() => {
+    render(<App thing='a' />, root)
+  })
+
+  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is(document.querySelector('#count').innerHTML, 'Effect: ')
+  t.deepEqual(eff, ['started'])
+
+  act(() => {
+    render(<App thing='a' />, root)
+  })
+
+  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is(document.querySelector('#count').innerHTML, 'Effect: started')
+  t.deepEqual(eff, ['started'])
+
+  act(() => {
+    render(null, root)
+  })
+
+  t.is(document.querySelector('#root').innerHTML, '')
+  t.deepEqual(eff, ['started', 'finished'])
+})
+
 function click(dom, el) {
   return el.dispatchEvent(
     new dom.window.MouseEvent('click', {

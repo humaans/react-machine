@@ -134,9 +134,9 @@ function Remove() {}
 - [x] add prev state (aka history)
 - [x] protect promises from sending events if they were cleaned up
 - [x] store running effects in a ref
+- [ ] complete the tests
 - [ ] effects should get event passed in
 - [ ] convert actions into reducers, so they're applied in order
-- [ ] complete the tests
 - [ ] add debug logging option
 - [ ] write proper typings
 - [ ] why are errors thrown in effect dipose not handled?
@@ -146,3 +146,6 @@ function Remove() {}
 #### V2
 
 - [ ] add hierarchy and parallelism (!!!!!!!!!!!)
+- [ ] only new effects are run, old ones can stay running
+- [ ] change from state.name string to state.value object
+- [ ] introduce state.matches() api
