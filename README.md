@@ -5,7 +5,7 @@
 <h4 align="center">Finite state machine hook for React featuring context, reducers, actions and effects.</h4>
 <br />
 
-When `useState` or `useReducer` is not enough, the `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful in handling asynchronouse effects in your components (for example, saving a form). In fact, you can think of `useMachine` as `useReducer` with a predefined set of possible events/transitions and with native support for invoking asynchronous logic.
+When `useState` or `useReducer` is not enough, the `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful in handling asynchronouse effects in your components (for example, saving a form). In fact, you can think of `useMachine` as `useReducer` with native support for asynchronous logic.
 
 Features include:
 
