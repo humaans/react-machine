@@ -307,10 +307,9 @@ state('save',
 
 #### V1
 
-- [ ] validate all transition targets
-- [ ] 100% test coverage
 - [ ] add debug logging option
-- [ ] write proper typings
+- [ ] write proper TypeScript type definitions
+- [ ] review the final state logic, e.g. wrt to internal transitions
 
 #### V2
 
@@ -318,3 +317,7 @@ state('save',
 - [ ] only new effects are run, old ones can stay running
 - [ ] change from state.name string to state.value object
 - [ ] introduce state.matches() api
+
+#### V3
+
+- [ ] add compatibility with XState visualiser, serialize into compatible JSON

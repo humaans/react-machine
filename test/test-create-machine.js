@@ -473,12 +473,92 @@ test('throw an error if state is passed an incorrect argument', (t) => {
 })
 
 test('throw an error if transition specifies an invalid target', (t) => {
-  const err = t.throws(() =>
+  const err1 = t.throws(() =>
     createMachine(({ state, transition }) => {
       state('foo', transition('next', 'bar'))
     })
   )
-  t.is(err.message, "Invalid transition target 'bar'")
+  t.is(err1.message, "Invalid transition target 'bar'")
+
+  const err2 = t.throws(() =>
+    createMachine(({ state, immediate }) => {
+      state('foo', immediate('bar'))
+    })
+  )
+  t.is(err2.message, "Invalid transition target 'bar'")
+})
+
+test('throw an error if transition arguments are incorrect', (t) => {
+  const err1 = t.throws(() =>
+    createMachine(({ state, transition }) => {
+      state('foo', transition(1))
+    })
+  )
+  t.is(err1.message, 'First argument of the transition must be the name of the event')
+
+  const err2 = t.throws(() =>
+    createMachine(({ state, transition }) => {
+      state('foo', transition('1', 2))
+    })
+  )
+  t.is(err2.message, 'Second argument of the transition must be the name of the target state')
+})
+
+test('service subscriptions', (t) => {
+  let active = null
+
+  const machine = createMachine(({ state, enter, internal }) => {
+    state(
+      'one',
+      enter({
+        effect: () => {
+          active = true
+          return () => {
+            active = false
+          }
+        },
+      }),
+      internal('assign', { assign: true })
+    )
+  })
+
+  const subs = []
+
+  const dispose = machine.subscribe((curr) => {
+    subs.push({ sub: 'sub1', context: curr.context })
+  })
+
+  machine.subscribe((curr) => {
+    subs.push({ sub: 'sub2', context: curr.context })
+  })
+
+  t.is(active, true)
+
+  t.deepEqual(machine.state, { name: 'one', context: {} })
+
+  machine.send({ type: 'assign', a: 1 })
+  t.deepEqual(machine.state, { name: 'one', context: { a: 1 } })
+
+  t.deepEqual(subs, [
+    { sub: 'sub1', context: { a: 1 } },
+    { sub: 'sub2', context: { a: 1 } },
+  ])
+
+  dispose()
+
+  machine.send({ type: 'assign', a: 2 })
+  t.deepEqual(machine.state, { name: 'one', context: { a: 2 } })
+
+  t.deepEqual(subs, [
+    { sub: 'sub1', context: { a: 1 } },
+    { sub: 'sub2', context: { a: 1 } },
+    { sub: 'sub2', context: { a: 2 } },
+  ])
+
+  machine.stop()
+
+  machine.send({ type: 'assign', a: 3 })
+  t.deepEqual(machine.state, { name: 'one', context: { a: 2 } })
 })
 
 function stub(obj, fn) {
