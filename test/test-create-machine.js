@@ -1,5 +1,6 @@
 /* eslint-disable no-sequences */
 
+import util from 'util'
 import test from 'ava'
 import { createService as createMachine } from '../lib/service.js'
 
@@ -559,6 +560,39 @@ test('service subscriptions', (t) => {
 
   machine.send({ type: 'assign', a: 3 })
   t.deepEqual(machine.state, { name: 'one', context: { a: 2 } })
+})
+
+test.only('hierarchical machine', async (t) => {
+  const machine = createMachine(({ state, transition, immediate, enter }) => {
+    state('a', () => {
+      enter({ assign: { a: 'entered' } })
+      state('a1', transition('go', 'a2'))
+      state('a2', transition('go', 'b'))
+    })
+
+    state('b', () => {
+      enter({ assign: { b: 'entered' } })
+      state('b1', transition('go', 'b2'))
+      state('b2', () => {
+        enter({ reduce: function x2() {} })
+        state('b2.1', enter({ reduce: function x21() {} }), transition('go', 'b2.2'))
+        state('b2.2', () => {
+          enter({ reduce: function x22() {} })
+          transition('go', 'c')
+        })
+      })
+    })
+
+    state('c', enter({ assign: { c: 'entered' } }))
+  })
+
+  console.log(util.inspect(machine.machine, { depth: null }))
+
+  t.deepEqual(machine.state.value, { a: { a1: true } })
+
+  // machine.send('go')
+
+  // t.deepEqual(machine.state.value, { a: { a2: true } })
 })
 
 function stub(obj, fn) {
