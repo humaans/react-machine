@@ -4,7 +4,17 @@ const execa = require('execa')
 
 const sh = (...args) => execa(...args, { stdio: 'inherit', shell: true })
 
-const paths = ['lib', 'types', 'package-lock.json', 'CHANGELOG.md', 'LICENSE.md', 'README.md']
+const paths = [
+  'lib/core.js',
+  'lib/hooks.js',
+  'lib/index.js',
+  'lib/service.js',
+  'types',
+  'package-lock.json',
+  'CHANGELOG.md',
+  'LICENSE.md',
+  'README.md',
+]
 
 ;(async function () {
   await sh('rm -rf dist && mkdir -p dist')
