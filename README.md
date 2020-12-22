@@ -73,21 +73,25 @@ Also see:
 
 ### Comparison to [Robot](https://thisrobot.life/)
 
-Robot is a great little Finite State Machine library with integrations into React, Preact, Svelte and more. It has a neat API that inspired the API of `react-machine` and boasts a lightweight implementation. Here are some differences:
+Robot is a great Finite State Machine library with integrations into React, Preact, Svelte and more. It has a neat succint API that inspired the API of `react-machine` and boasts a lightweight implementation. Here are some differences:
 
-- Robot requires every helper function to be imported individually (e.g. `state`, `transition`, `action`, `reducer` and so on) in every module you need to create machines. `react-machine` uses a very similar DSL for declaring machines, but passes helpers as arguments to the machine creation function (e.g. `state`, `transition`), and takes hooks as options (e.g. `action`, `reduce`). This means you only ever need to import `useMachine`, which is more akin to how you'd use `useState` or `useReducer` for managing state.
-- Robot has some support for nesting machines, but `react-machine` (in the upcoming V2) will support arbitrarily nested and parallel states, adhering more closely to the [SCXML](https://www.w3.org/TR/scxml/) spec.
-- Robot does not support internal transitions, making it difficult to update machine context mid promise invocation.
+- Robot requires every helper function to be imported individually. `react-machine` uses a similar DSL, but passes helpers as arguments to the machine creation function or takes them as options. This means you only ever need to import `useMachine`, which is more akin to how you'd use `useState` or `useReducer` for managing state.
+- Robot has some support for nesting machines, but `react-machine` (_in the upcoming V2_) will support arbitrarily nested and parallel states, adhering more closely to the [SCXML](https://www.w3.org/TR/scxml/) spec.
+- Robot does not support internal transitions, making it difficult to update machine context in the middle of an async function invocation.
 - Robot does not have `enter` and `exit` hooks, and does not allow custom effect implementations.
 
 ### Comparison to [XState](https://xstate.js.org/):
 
 XState is the most powerful modern state chart / state machine implementation for JavaScript. It's rich in features and supports React and Vue out of the box. Here are some differences:
 
-- `react-machine` strives to create a smaller surface area, less features, less options, less packages - all intended to help with writability and readability of the machines, for example you will not find Actors, machine inter messaging, delayed events, support for observables (although you can easily hook into them in a custom effect), history states in `react-machine`
-- related to the point above, full compatibility / serialisation to SCXML is a non goal for `react-machine`, SCXML (and it's interpration algorithm in particular) is only used to guide the implementation of `react-machine`
-- `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future
-- XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future (wanna work on it?)
+- `react-machine` strives to create a smaller surface area, less features, less options, less packages. This could be seen as a good or a bad thing depending on your perspective and your requirements. The goal is to seek _simplicy_, which can be subjective. For example, you will not find actors, machine inter messaging, delayed events or history states in `react-machine`.
+- related to the point above, full compatibility / serialisation to SCXML is a non goal for `react-machine`, SCXML (and it's interpration algorithm in particular) is only used to guide the implementation of `react-machine`.
+- `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future.
+- XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future.
+
+### Motivation
+
+In conclusion, `react-machine` is an experiment in creating a lightweight, simple, flexible solution for component level state management in React.
 
 ## API
 
@@ -142,7 +146,7 @@ Available options:
 
 Returns `[state, send, machine]`:
 
-- `state` - current state of shape `{ name, context }`
+- `state` - current state of shape `{ name, context, final }`
 - `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
 - `machine` - a stateless machine description that could be used to transition to new states
 
