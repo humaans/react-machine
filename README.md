@@ -303,30 +303,6 @@ state('save',
 
 #### V1
 
-- [x] es6 modules
-- [x] snowpack "good package mode"
-- [x] invoke
-- [x] effect
-- [x] set final: true somewhere
-- [x] decide if invoke / effect will be options or functions: options 🙌
-- [x] immediate chains
-- [x] immediate chains with invokes/effects (??)
-- [x] guards
-- [x] introduce assign: true, assign: { error: null }, assign: data => data2 as a shortcut
-- [x] separate machine (currently called states) from state
-- [x] fix tests with the new structure
-- [x] introduce enter/exit
-- [x] rename applyEvent to transition
-- [x] reuse applyEvent instead of applyTransition in initialisation
-- [x] pass context to assign
-- [x] add internal() transitions that transition to itself, useful for assign and other bits
-- [x] find a better name for "transforms"
-- [x] protect promises from sending events if they were cleaned up
-- [x] store running effects in a ref
-- [x] write a thorough readme
-- [x] complete the tests
-- [x] effects should get event passed in
-- [x] convert actions into reducers, so they're applied in order
 - [ ] validate all transition targets
 - [ ] 100% test coverage
 - [ ] add debug logging option
