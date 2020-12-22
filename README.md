@@ -105,13 +105,11 @@ const [state, send] = useMachine(({ state, transition, immediate, internal, ente
 }, context)
 ```
 
-See below for the documentation of every function and option:
-
-Hook:
+#### Hook
 
 * [useMachine](#usemachinedescription-context-options)
 
-State machine description:
+#### State machine description
 
 * [state](#statename-transitions)
 * [transition](#transitionevent-target-options)
@@ -120,7 +118,7 @@ State machine description:
 * [enter](#enteroptions)
 * [exit](#exitoptions)
 
-Transition hooks:
+#### Transition hooks
 
 * [guard](#guard)
 * [reduce](#reduce)
