@@ -91,32 +91,62 @@ XState is the most powerful modern state chart / state machine implementation fo
 
 ## API
 
+### Hook
+
 ### `useMachine(description, context, options)`
 
-- `description` - the machine description function, see examples for usage, description function is invoked with `{ state, transition, immediate, internal, enter, exit }`
-- `context` - the context to be used within the machine, since it's common to pass props and other computed data via context, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options
+Create the machine in a component.
+
+Example:
+
+```js
+const myMachine = useCallback(({ state, transition }) => {
+  state('a', transition('next', 'b'))
+  state('b', transition('next', 'c'))
+  state('c')
+})
+const [state, send, machine] = useMachine(myMachine, { x: 0 })
+const { name, context, final } = state
+```
+
+- `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` as arguments.
+- `context` - the context to be assigned to the machine's state. Since it's common to pass props and other computed data via context, by default, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options.
 - `options` - hook options
-  - `assign` - default: `assign`, the name of the event to be sent when context values change, set this to `false` to disable sending the event altogether
-  - `deps` - default: `undefined`, by default all context values are checked for changes, customize the dependency array to be used for checking when to send the `assign` event
+  - `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
+  - `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array.
 
 **Returns** `[state, send, machine]`:
 
 - `state` - current state of shape `{ name, context }`
 - `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
-- `machine` - the stateless machine description object that can be used to inspect the machine or transition to new states
-
-Machines are constructed using the api passed into the machine description function. Below is the documentation for every available function for constructing machines.
+- `machine` - a stateless machine description that could be used to transition to new states
 
 ### `state(name, ...transitions)`
 
-Used to declare all of the possible states of the state machine.
+Declare a state.
+
+Example:
+
+```js
+state('loading')
+state('loading', transition('go', 'ready'))
+state('loading', immediate('ready', { guard: (ctx) => ctx.loaded }))
+```
 
 - `name` - name of the state
 - `transitions` - any number of available: `transition()`, `immediate()`, `internal()`, `enter()`, `exit()`
 
 ### `transition(event, target, options)`
 
-When an event is sent, the first transition that matches the event type declared in the transition is applied to transition the machine to the next state.
+Declare a transition between states.
+
+Example:
+
+```js
+transition('save', 'saving')
+transition('reset', 'edit', { reduce: ctx => ({ ...ctx, data: null }) })
+transition('close', 'closing', { action: ctx => ctx.onClose() })
+```
 
 - `event` - the name of the event that will trigger this transition
 - `target` - the name of the target state
@@ -124,7 +154,15 @@ When an event is sent, the first transition that matches the event type declared
 
 ### `immediate(target, options)`
 
-A special type of transition that is executed after every transition into the state (including internal transitions). If no `guard` option is used, the transition will always immediately be applied and move the machine to a new state. If the `guard` option is used, the transition will only be applied if the `guard` condition passes. Note that, when immediate transitions take place, all of the intermediate transition hooks and intermediate state enter/exit hooks are triggered, however the effects (including `invoke`) are only executed for the final state, not any of the intermediate states.
+A special type of transition that is executed immediately upon entering (or re-entering a state with an internal transition). If no `guard` option is used, the transition will always immediately be applied and move the machine to a new state. If the `guard` option is used, the transition will only be applied if the `guard` condition passes. Note that, when immediate transitions take place, all of the intermediate transition hooks and intermediate state enter/exit hooks are triggered, however the effects (including `invoke`) are only executed for the final state, not any of the intermediate states.
+
+Example:
+
+```js
+immediate('ready')
+immediate('ready', { guard: { guard: (ctx) => ctx.loaded } })
+```
+
 
 - `target` - the name of the target state
 - `options` - in the shape of `{ reduce, assign, action, guard }`
@@ -133,12 +171,27 @@ A special type of transition that is executed after every transition into the st
 
 A special type of transition that does not leave the state and does not trigger any enter/exit hooks. Useful for performing actions or updating context without leaving the state. Note: this transition does re-evaluate all immediate transitions of the state.
 
+Example:
+
+```js
+internal('assign', { assign: true })
+internal('reset', { assign: { count: 0 } })
+```
+
 - `event` - the name of the event that will trigger this transition
 - `options` - in the shape of `{ reduce, assign, action, guard }`
 
 ### `enter(options)`
 
-Hooks to run when entering the state.
+Hooks to run when entering a state.
+
+Example:
+
+```js
+enter({ action: ctx => ctx.start() })
+enter({ invoke: ctx => ctx.fetch('/data') })
+enter({ assign: { count: 0 } })
+```
 
 - `options` - in the shape of `{ reduce, assign, action, invoke, effect }`
 
@@ -146,13 +199,22 @@ Hooks to run when entering the state.
 
 Hooks to run when leaving the state.
 
+Example:
+
+```js
+exit({ action: ctx => ctx.stop() })
+exit({ assign: { error: null } })
+```
+
 - `options` - in the shape of `{ reduce, assign, action }`
 
 And finally, a set of hooks that can be executed upon `transition` or state `enter`/`exit`. Note that `reduce`, `assign` and `action` hooks will be executed in the order provided. Whereas `invoke` and `effect` will only get executed after rerendering the component, in a `useEffect` React hook.
 
 ### `reduce`
 
-Examples:
+Updated context based on current context and the incoming event.
+
+Example:
 
 ```js
 { reduce: (context, event) => nextContext }
@@ -160,11 +222,11 @@ Examples:
 { reduce: [reduce1, reduce2] }
 ```
 
-Return the new context.
-
 ### `assign`
 
-Examples:
+Return a partial context update object, that will be immutably assigned to the current context. A commonly useful shortcut for assigning event paylods to the context.
+
+Example:
 
 ```js
 { assign: (context, { type, ...payload }) => ({ ...context , ...payload }) }
@@ -173,11 +235,9 @@ Examples:
 { assign: [assign1, assign2] }
 ```
 
-Return a partial context update object, that will be immutably assigned to the current context. A commonly useful shortcut for assigning event paylods to the context.
-
 ### `action`
 
-Examples:
+Example:
 
 ```js
 { action: (context, event) => context.onClose() }
@@ -188,7 +248,9 @@ A fire and forget action executed immediately (synchronously) upon sending an ev
 
 ### `invoke`
 
-Examples:
+A way to invoke async functions as part of entering a state. If the promise is fulfilled, an event of shape `{ type: 'done', data }` is sent, and if the promise rejects, an event of `{ type: 'error', error }` is sent. Note, if the machine exits the state while the promise is pending, the results will be ignored and no event will get sent. Note, internally, `invoke` is turned into an `effect`.
+
+Example:
 
 ```js
 state('save',
@@ -198,11 +260,11 @@ state('save',
 )
 ```
 
-A way to invoke async functions as part of entering a state. If the promise is fulfilled, an event of shape `{ type: 'done', data }` is sent, and if the promise rejects, an event of `{ type: 'error', error }` is sent. Note, if the machine exits the state while the promise is pending, the results will be ignored and no event will get sent. Note, internally, `invoke` is turned into an `effect`.
-
 ### `effect`
 
-Examples:
+A way of handling side effects, async effects, subscriptions or activities. Once the state is entered, the effect gets started (in `useEffect` and only after finalising all of the immediate transitions) and can send any number of events. Note that `context` will be valid when initially running the effect, but will get stale afterwards, and is best read in subsequent internal transitions. Also note that `send` will be ignored after the effect is cleaned up, and similarly `send` can not be used in the cleanup function of the effect.
+
+Example:
 
 ```js
 const addPing = (ctx, event) => ({ pings: ctx.pings.concat(event.ping) })
@@ -219,17 +281,15 @@ state('save',
 )
 ```
 
-A way of handling side effects, async effects, subscriptions or activities. Once the state is entered, the effect gets started (in `useEffect` and only after finalising all of the immediate transitions) and can send any number of events. Note that `context` will be valid when initially running the effect, but will get stale afterwards, and is best read in subsequent internal transitions. Also note that `send` will be ignored after the effect is cleaned up, and similarly `send` can not be used in the cleanup function of the effect.
-
 ### `guard`
 
-Examples:
+If the guard condition fails, the transition is skipped when matching against the event and selection proceeds to the next transition. Commonly used with `immediate` transitions, but works with any type of transition.
+
+Example:
 
 ```js
 { guard: (context, event) => context.status === 'success' }
 ```
-
-If the guard condition fails, the transition is skipped when matching against the event and selection proceeds to the next transition.
 
 ### Roadmap
 
@@ -263,7 +323,6 @@ If the guard condition fails, the transition is skipped when matching against th
 - [ ] 100% test coverage
 - [ ] add debug logging option
 - [ ] write proper typings
-- [ ] release!
 
 #### V2
 
