@@ -341,29 +341,31 @@ test('simple machine', (t) => {
 
   // machine structure
   t.deepEqual(machine.machine, {
-    initial: {
-      name: 'initial',
-      enter: [],
-      exit: [],
-      transitions: {
-        go: [
-          {
-            type: 'transition',
-            event: 'go',
-            target: 'final',
-            guards: [],
-            reducers: [],
-          },
-        ],
+    states: {
+      initial: {
+        name: 'initial',
+        enter: [],
+        exit: [],
+        transitions: {
+          go: [
+            {
+              type: 'transition',
+              event: 'go',
+              target: 'final',
+              guards: [],
+              reducers: [],
+            },
+          ],
+        },
+        immediates: [],
       },
-      immediates: [],
-    },
-    final: {
-      name: 'final',
-      enter: [],
-      exit: [],
-      transitions: {},
-      immediates: [],
+      final: {
+        name: 'final',
+        enter: [],
+        exit: [],
+        transitions: {},
+        immediates: [],
+      },
     },
   })
 
@@ -458,7 +460,7 @@ test('complex machine', (t) => {
   t.is(machine.state.final, true)
 })
 
-test('throw and error if state is passed an incorrect argument', (t) => {
+test('throw an error if state is passed an incorrect argument', (t) => {
   const err = t.throws(() =>
     createMachine(({ state, enter }) => {
       state('foo', { assign: { b: 2 } })
@@ -468,6 +470,15 @@ test('throw and error if state is passed an incorrect argument', (t) => {
     err.message,
     "State 'foo' should be passed one of enter(), exit(), transition(), immediate() or internal()"
   )
+})
+
+test('throw an error if transition specifies an invalid target', (t) => {
+  const err = t.throws(() =>
+    createMachine(({ state, transition }) => {
+      state('foo', transition('next', 'bar'))
+    })
+  )
+  t.is(err.message, "Invalid transition target 'bar'")
 })
 
 function stub(obj, fn) {
