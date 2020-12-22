@@ -1,5 +1,5 @@
 # Changelog
 
-## 0.1.0
+## 0.2.0
 
-First release 🎉. The project is close to being V1 ready.
+First release 🎉. Thanks to @tempname11 for the npm package name.
