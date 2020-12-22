@@ -91,9 +91,62 @@ XState is the most powerful modern state chart / state machine implementation fo
 
 ## API
 
+Machines are created using the API passed into machine description function, here's an exhaustive example showing all possible types of transitions and hooks:
+
+```js
+const [state, send] = useMachine(({ state, transition, immediate, internal, enter, exit }) => {
+  state(stateName,
+    enter({ reduce, assign, action, invoke, effect }),
+    transition(event, target, { guard, reduce, assign, action }),
+    immediate(target, { guard, reduce, assign, action }),
+    internal(event, { guard, reduce, assign, action }),
+    exit({ reduce, assign, action }),
+  )
+}, context)
+```
+
+See below for the documentation of every function and option:
+
+Hook:
+
+* [useMachine](#usemachinedescription-context-options)
+
+State machine description:
+
+* [state](#statename-transitions)
+* [transition](#transitionevent-target-options)
+* [immediate](#immediatetarget-options)
+* [internal](#internalevent-options)
+* [enter](#enteroptions)
+* [exit](#exitoptions)
+
+Transition hooks:
+
+* [guard](#guard)
+* [reduce](#reduce)
+* [assign](#assign)
+* [action](#action)
+* [invoke](#invoke)
+* [effect](#effect)
+
 ### `useMachine(description, context, options)`
 
 Create and initialise the machine.
+
+- `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` as arguments.
+- `context` - the context to be assigned to the machine's state. Since it's common to pass props and other computed data via context, by default, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options.
+- `options` - hook options
+
+Available options:
+
+- `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
+- `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array.
+
+Returns `[state, send, machine]`:
+
+- `state` - current state of shape `{ name, context }`
+- `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
+- `machine` - a stateless machine description that could be used to transition to new states
 
 ```js
 const myMachine = useCallback(({ state, transition }) => {
@@ -105,21 +158,12 @@ const [state, send, machine] = useMachine(myMachine, { x: 0 })
 const { name, context, final } = state
 ```
 
-- `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` as arguments.
-- `context` - the context to be assigned to the machine's state. Since it's common to pass props and other computed data via context, by default, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options.
-- `options` - hook options
-  - `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
-  - `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array.
-
-**Returns** `[state, send, machine]`:
-
-- `state` - current state of shape `{ name, context }`
-- `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
-- `machine` - a stateless machine description that could be used to transition to new states
-
 ### `state(name, ...transitions)`
 
 Declare a state.
+
+- `name` - name of the state
+- `transitions` - any number of available: `transition()`, `immediate()`, `internal()`, `enter()`, `exit()`
 
 ```js
 state('loading')
@@ -127,12 +171,13 @@ state('loading', transition('go', 'ready'))
 state('loading', immediate('ready', { guard: (ctx) => ctx.loaded }))
 ```
 
-- `name` - name of the state
-- `transitions` - any number of available: `transition()`, `immediate()`, `internal()`, `enter()`, `exit()`
-
 ### `transition(event, target, options)`
 
 Declare a transition between states.
+
+- `event` - the name of the event that will trigger this transition
+- `target` - the name of the target state
+- `options` - in the shape of `{ reduce, assign, action, guard }`
 
 ```js
 transition('save', 'saving')
@@ -140,38 +185,35 @@ transition('reset', 'edit', { reduce: ctx => ({ ...ctx, data: null }) })
 transition('close', 'closing', { action: ctx => ctx.onClose() })
 ```
 
-- `event` - the name of the event that will trigger this transition
-- `target` - the name of the target state
-- `options` - in the shape of `{ reduce, assign, action, guard }`
-
 ### `immediate(target, options)`
 
 A special type of transition that is executed immediately upon entering (or re-entering a state with an internal transition). If no `guard` option is used, the transition will always immediately be applied and move the machine to a new state. If the `guard` option is used, the transition will only be applied if the `guard` condition passes. Note that, when immediate transitions take place, all of the intermediate transition hooks and intermediate state enter/exit hooks are triggered, however the effects (including `invoke`) are only executed for the final state, not any of the intermediate states.
+
+- `target` - the name of the target state
+- `options` - in the shape of `{ reduce, assign, action, guard }`
 
 ```js
 immediate('ready')
 immediate('ready', { guard: { guard: (ctx) => ctx.loaded } })
 ```
 
-
-- `target` - the name of the target state
-- `options` - in the shape of `{ reduce, assign, action, guard }`
-
 ### `internal(event, options)`
 
 A special type of transition that does not leave the state and does not trigger any enter/exit hooks. Useful for performing actions or updating context without leaving the state. Note: this transition does re-evaluate all immediate transitions of the state.
+
+- `event` - the name of the event that will trigger this transition
+- `options` - in the shape of `{ reduce, assign, action, guard }`
 
 ```js
 internal('assign', { assign: true })
 internal('reset', { assign: { count: 0 } })
 ```
 
-- `event` - the name of the event that will trigger this transition
-- `options` - in the shape of `{ reduce, assign, action, guard }`
-
 ### `enter(options)`
 
 Hooks to run when entering a state.
+
+- `options` - in the shape of `{ reduce, assign, action, invoke, effect }`
 
 ```js
 enter({ action: ctx => ctx.start() })
@@ -179,20 +221,16 @@ enter({ invoke: ctx => ctx.fetch('/data') })
 enter({ assign: { count: 0 } })
 ```
 
-- `options` - in the shape of `{ reduce, assign, action, invoke, effect }`
-
 ### `exit(options)`
 
 Hooks to run when leaving the state.
+
+- `options` - in the shape of `{ reduce, assign, action }`
 
 ```js
 exit({ action: ctx => ctx.stop() })
 exit({ assign: { error: null } })
 ```
-
-- `options` - in the shape of `{ reduce, assign, action }`
-
-And finally, a set of hooks that can be executed upon `transition` or state `enter`/`exit`. Note that `reduce`, `assign` and `action` hooks will be executed in the order provided. Whereas `invoke` and `effect` will only get executed after rerendering the component, in a `useEffect` React hook.
 
 ### `guard`
 
@@ -231,7 +269,6 @@ A fire and forget action executed immediately (synchronously) upon sending an ev
 { action: (context, event) => context.onClose() }
 { action: [action1, action2] }
 ```
-
 
 ### `invoke`
 
