@@ -310,6 +310,7 @@ state('save',
 - [ ] add debug logging option
 - [ ] write proper TypeScript type definitions
 - [ ] review the final state logic, e.g. wrt to internal transitions
+- [ ] review the `action` hook, it's not ok to call things in the middle of `dispatch`, consider collecting actions upfront and calling them before dispatching the event to the reducer, this way actions get called before the transition, eagerly, and effects run after, as it's common to call various functions directly in event handlers, e.g. `onClick={() => close()}`
 
 #### V2
 
