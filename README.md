@@ -11,16 +11,16 @@ When `useState` or `useReducer` is not enough, the `useMachine` hook can be used
 Features include:
 
 - a single `useMachine` hook for declaratively describing state machines
-- define `states` and `transitions` between those states
+- define `states` and `transitions` between states
 - `immediate` transitions with `guards`
-- `internal` transitions, useful for updating context based on changing props
-- a variety of transition hooks available - `reduce`, `assign`, `action`, `guard`
+- `internal` transitions for updating context or triggering actions
+- transition hooks - `reduce`, `assign`, `action`, `guard`
 - state `enter` and `exit` hooks - `reduce`, `assign`, `action`, `invoke`, `effect`
-- out of the box support for async functions with `invoke`
-- custom side effects with `effect`
-- `useReducer` used for storing state internally, with transitions applied using `dispatch` and effects using `useEffect`, making this a native React state machine implementation, built with concurrent mode in mind
-- extend machines with hierarchical and parallel states _(coming in V2 in 2021)_
-- semantics modelled inline with the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
+- `invoke` for async promise returning functions
+- `effect` for custom async logic and long running activities
+- pure stateless machine implementation using `useReducer` and `useEffect` to hook into React
+- hierarchical and parallel states _(coming in V2 in 2021)_
+- semantics guided by the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
 
 ### Example
 
@@ -28,8 +28,8 @@ Features include:
 import React from 'react'
 import { useMachine } from 'react-machine'
 
-const isSuccess = (ctx) => ctx.status === 'success'
-const isError = (ctx) => ctx.status === 'error'
+const isSuccess = (ctx) => ctx.item.status === 'success'
+const isError = (ctx) => ctx.item.status === 'error'
 const increment = (ctx) => ({ ...ctx, count: ctx.count + 1 })
 const retry = (ctx) => ctx.retry()
 
@@ -54,8 +54,8 @@ const machine = ({ state, transition, immediate, internal, enter }) => {
   )
 }
 
-export function Component({ status, retry }) {
-  const [{ name, context }, send] = useMachine(machine, { status, retry })
+export function Component({ item, retry }) {
+  const [{ name, context }, send] = useMachine(machine, { item, retry })
 
   if (name === 'loading') return <div>Loading</div>
   if (name === 'error') return <button onClick={() => send('retry')}>Retry</button>
@@ -67,7 +67,7 @@ Also see:
 
   * [Example: Form](examples/example-form.md)
 
-## Acknowledgements
+## Motivation
 
 `react-machine` is very much inspired by [XState](https://xstate.js.org/) and [Robot](https://thisrobot.life/) - thank you for really great libraries 🙏
 
@@ -89,9 +89,9 @@ XState is the most powerful modern state chart / state machine implementation fo
 - `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future.
 - XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future.
 
-### Motivation
+### Conclusion
 
-In conclusion, `react-machine` is an experiment in creating a lightweight, simple, flexible solution for component level state management in React.
+In summary, `react-machine` is an experiment in creating a lightweight, simple, flexible solution for component level state management in React. The core machine logic is pure and stateless, which allows for delegating the state storage to `useReducer` and effect execution to `useEffect`, done soe with concurrent mode compatibility in mind.
 
 ## API
 
