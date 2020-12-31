@@ -3,22 +3,22 @@
 </p>
 
 
-<h4 align="center">Finite state machine hook for React featuring context, reducers, actions and effects.</h4>
+<h4 align="center">Finite state machine hook for React with reactive context, state data, reducers and effects.</h4>
 <br />
 
-When `useState` or `useReducer` is not enough, the `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful in handling asynchronouse effects in your components (for example, saving a form). In fact, you can think of `useMachine` as `useReducer` with native support for asynchronous logic.
+When `useState` or `useReducer` is not enough, `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful in handling asynchronouse effects in your components (for example, saving a form). In fact, you can think of `useMachine` as `useReducer` with built in support for asynchronous logic.
 
 Features include:
 
 - a single `useMachine` hook for declaratively describing state machines
 - define `states` and `transitions` between states
 - `immediate` transitions with `guards`
-- `internal` transitions for updating context or triggering actions
-- transition hooks - `reduce`, `assign`, `action`, `guard`
-- state `enter` and `exit` hooks - `reduce`, `assign`, `action`, `invoke`, `effect`
+- `internal` transitions for updating extended state or triggering effects
+- transition hooks - `reduce`, `assign`, `invoke`, `effect`, `guard`
+- enter/exit hooks - `reduce`, `assign`, `invoke`, `effect`
 - `invoke` for async promise returning functions
 - `effect` for custom async logic and long running activities
-- pure stateless machine implementation using `useReducer` and `useEffect` to hook into React
+- pure stateless machine implementation integrated into React using `useReducer` and `useEffect`
 - hierarchical and parallel states _(coming in V2 in 2021)_
 - semantics guided by the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
 
@@ -28,38 +28,35 @@ Features include:
 import React from 'react'
 import { useMachine } from 'react-machine'
 
-const isSuccess = (ctx) => ctx.item.status === 'success'
-const isError = (ctx) => ctx.item.status === 'error'
-const increment = (ctx) => ({ ...ctx, count: ctx.count + 1 })
-const retry = (ctx) => ctx.retry()
+const isSuccess = ctx => ctx.item.status === 'success'
+const isError = ctx => ctx.item.status === 'error'
+const increment = (ctx, state) => ({ ...state, count: state.count + 1 })
+const retry = ctx => ctx.retry()
 
 const machine = ({ state, transition, immediate, internal, enter }) => {
   state(
     'loading',
-    internal('assign', { assign: true }),
     immediate('counter', { guard: isSuccess }),
     immediate('error', { guard: isError })
   )
 
   state('error',
-    internal('assign', { assign: true }),
-    transition('retry', 'loading', { action: retry })
+    transition('retry', 'loading', { effect: retry })
   )
 
   state(
     'counter',
     enter({ assign: { count: 0 } }),
-    internal('assign', { assign: true }),
     internal('increment', { reduce: increment })
   )
 }
 
 export function Component({ item, retry }) {
-  const [{ name, context }, send] = useMachine(machine, { item, retry })
+  const { state, send } = useMachine(machine, { item, retry })
 
-  if (name === 'loading') return <div>Loading</div>
-  if (name === 'error') return <button onClick={() => send('retry')}>Retry</button>
-  return <button onClick={() => send('increment')}>{context.count}</button>
+  if (state.name === 'loading') return <div>Loading</div>
+  if (state.name === 'error') return <button onClick={() => send('retry')}>Retry</button>
+  return <button onClick={() => send('increment')}>{state.data.count}</button>
 }
 ```
 
@@ -98,16 +95,24 @@ In summary, `react-machine` is an experiment in creating a lightweight, simple, 
 Machines are created using the API passed into machine description function, here's an exhaustive example showing all possible types of transitions and hooks:
 
 ```js
-const [state, send] = useMachine(({ state, transition, immediate, internal, enter, exit }) => {
-  state(stateName,
-    enter({ reduce, assign, action, invoke, effect }),
-    transition(event, target, { guard, reduce, assign, action }),
-    immediate(target, { guard, reduce, assign, action }),
-    internal(event, { guard, reduce, assign, action }),
-    exit({ reduce, assign, action }),
-  )
-}, context)
+const { state, send, context, machine } = useMachine(({ state, transition, immediate, internal, enter, exit }) => {
+    state(stateName,
+      enter({ reduce, assign, invoke, effect }),
+      transition(event, target, { guard, reduce, assign, effect }),
+      immediate(target, { guard, reduce, assign, effect }),
+      internal(event, { guard, reduce, assign, effect }),
+      exit({ reduce, assign, effect }),
+    )
+}, context, initialData, options)
 ```
+
+### Concepts
+
+When you invoke the `useMachine` hook .. returns machine state, send event, context, machine itself. Typically you'll use state, send and you can use context in case you're passing it down to other components, it can be useful.
+
+Since machines deal with managing what node the machine is in (name) and can also manipulate arbirary set of data as part of transitions and effects (data), the state consists of { name, data }.
+
+Context - `react-machine` hook has been built with React in mind state machine hook explain how it's reactive via the 'assign' event. Think of machine context a little bit like props of a component. It's just some immutable data that can be used in your guards, reducers and effects. This is separate from state since changing context e.g. passing an updated prop to your component, which then gets passed as updated context value to your machine by default will not trigger any rerender. But it will emit an internal transition with the type of `assign` (which you can customize via machine options). This means that as new context passes through your machine, you can capture this event in an internal, immediate or external transition to react to some changed prop to move the machine to a different state.
 
 #### Hook
 
@@ -127,27 +132,28 @@ const [state, send] = useMachine(({ state, transition, immediate, internal, ente
 * [guard](#guard)
 * [reduce](#reduce)
 * [assign](#assign)
-* [action](#action)
 * [invoke](#invoke)
 * [effect](#effect)
 
-### `useMachine(description, context, options)`
+### `useMachine(description, context, initialData, options)`
 
 Create and initialise the machine.
 
 - `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` as arguments.
 - `context` - the context to be assigned to the machine's state. Since it's common to pass props and other computed data via context, by default, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options.
+- `initialData` - ??? TODO UPDATE THIS AND THE POINT ABOVE
 - `options` - hook options
 
 Available options:
 
 - `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
-- `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array.
+- `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array. TODO UPDATE
 
 Returns `[state, send, machine]`:
 
-- `state` - current state of shape `{ name, context, final }`
+- `state` - current state of shape `{ name, data, final }`
 - `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
+- `context` - the same value that was passed in as the context argument to the hook
 - `machine` - a stateless machine description that could be used to transition to new states
 
 ```js
@@ -155,9 +161,9 @@ const myMachine = useCallback(({ state, transition }) => {
   state('a', transition('next', 'b'))
   state('b', transition('next', 'c'))
   state('c')
-})
-const [state, send, machine] = useMachine(myMachine, { x: 0 })
-const { name, context, final } = state
+}, [])
+const  {state, send, context, machine } = useMachine(myMachine, { close: props.close }, { x: 0 })
+const { name, data, final } = state
 ```
 
 ### `state(name, ...transitions)`
@@ -170,7 +176,7 @@ Declare a state.
 ```js
 state('loading')
 state('loading', transition('go', 'ready'))
-state('loading', immediate('ready', { guard: (ctx) => ctx.loaded }))
+state('loading', immediate('ready', { guard: ctx => ctx.loaded }))
 ```
 
 ### `transition(event, target, options)`
@@ -179,12 +185,12 @@ Declare a transition between states.
 
 - `event` - the name of the event that will trigger this transition
 - `target` - the name of the target state
-- `options` - in the shape of `{ reduce, assign, action, guard }`
+- `options` - in the shape of `{ reduce, assign, invoke, effect, guard }`
 
 ```js
 transition('save', 'saving')
 transition('reset', 'edit', { reduce: ctx => ({ ...ctx, data: null }) })
-transition('close', 'closing', { action: ctx => ctx.onClose() })
+transition('close', 'closing', { effect: ctx => ctx.onClose() })
 ```
 
 ### `immediate(target, options)`
@@ -192,19 +198,19 @@ transition('close', 'closing', { action: ctx => ctx.onClose() })
 A special type of transition that is executed immediately upon entering (or re-entering a state with an internal transition). If no `guard` option is used, the transition will always immediately be applied and move the machine to a new state. If the `guard` option is used, the transition will only be applied if the `guard` condition passes. Note that, when immediate transitions take place, all of the intermediate transition hooks and intermediate state enter/exit hooks are triggered, however the effects (including `invoke`) are only executed for the final state, not any of the intermediate states.
 
 - `target` - the name of the target state
-- `options` - in the shape of `{ reduce, assign, action, guard }`
+- `options` - in the shape of `{ reduce, assign, invoke, effect, guard }`
 
 ```js
 immediate('ready')
-immediate('ready', { guard: { guard: (ctx) => ctx.loaded } })
+immediate('ready', { guard: { guard: ctx => ctx.loaded } })
 ```
 
 ### `internal(event, options)`
 
-A special type of transition that does not leave the state and does not trigger any enter/exit hooks. Useful for performing actions or updating context without leaving the state. Note: this transition does re-evaluate all immediate transitions of the state.
+A special type of transition that does not leave the state and does not trigger any enter/exit hooks. Useful for performing effects or updating context without leaving the state. Note: this transition does re-evaluate all immediate transitions of the state.
 
 - `event` - the name of the event that will trigger this transition
-- `options` - in the shape of `{ reduce, assign, action, guard }`
+- `options` - in the shape of `{ reduce, assign, invoke, effect, guard }`
 
 ```js
 internal('assign', { assign: true })
@@ -215,11 +221,11 @@ internal('reset', { assign: { count: 0 } })
 
 Hooks to run when entering a state.
 
-- `options` - in the shape of `{ reduce, assign, action, invoke, effect }`
+- `options` - in the shape of `{ reduce, assign, invoke, effect }`
 
 ```js
-enter({ action: ctx => ctx.start() })
-enter({ invoke: ctx => ctx.fetch('/data') })
+enter({ effect: ctx => ctx.start() })
+enter({ invoke: (ctx, data) => ctx.fetch('/item/' + data.id) })
 enter({ assign: { count: 0 } })
 ```
 
@@ -227,10 +233,10 @@ enter({ assign: { count: 0 } })
 
 Hooks to run when leaving the state.
 
-- `options` - in the shape of `{ reduce, assign, action }`
+- `options` - in the shape of `{ reduce, assign, effect }`
 
 ```js
-exit({ action: ctx => ctx.stop() })
+exit({ effect: ctx => ctx.stop() })
 exit({ assign: { error: null } })
 ```
 
@@ -239,7 +245,7 @@ exit({ assign: { error: null } })
 If the guard condition fails, the transition is skipped when matching against the event and selection proceeds to the next transition. Commonly used with `immediate` transitions, but works with any type of transition.
 
 ```js
-{ guard: (context, event) => context.status === 'success' }
+{ guard: (context, data, event) => context.status === 'success' }
 ```
 
 ### `reduce`
@@ -261,15 +267,6 @@ Return a partial context update object, that will be immutably assigned to the c
 { assign: true } // same as above
 { assign: { static: 'value' } }
 { assign: [assign1, assign2] }
-```
-
-### `action`
-
-A fire and forget action executed immediately (synchronously) upon sending an event.
-
-```js
-{ action: (context, event) => context.onClose() }
-{ action: [action1, action2] }
 ```
 
 ### `invoke`
@@ -322,3 +319,15 @@ state('save',
 #### V3
 
 - [ ] add compatibility with XState visualiser, serialize into compatible JSON
+
+### React integration requirements
+
+1. If no assign provided, do not double render.
+2. If no guards trigger, do not double render.
+3. Trigger actions before transitioning the component state. (test if it's ok to sequence event -> parent rerender -> component state dispatch).
+
+- [ ] Collect all enter effects - only run effects of the target state, not intermediate ones
+- [ ] Collect all exit effects - only run effects on the leaving state, not intermediate ones
+- [ ] Collect all transition effects - all of them get queued
+- [ ] Collect all immmediate effects - all of them get queued
+- [ ] Collect all internal effects - all of them get queued, but the state effects continue running - this is where we'll need to introduce the ID checks in runEffects to see what effects should continue running or similar.

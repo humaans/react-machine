@@ -15,18 +15,18 @@ test.serial('usage', async (t) => {
     state('initial', immediate('counter'))
     state(
       'counter',
-      transition('increment', 'counter', { reduce: (ctx) => ({ ...ctx, a: ctx.a + 1 }) }),
-      immediate('final', { guard: (ctx) => ctx.a >= 4 })
+      transition('increment', 'counter', { reduce: (ctx, data) => ({ ...data, a: data.a + 1 }) }),
+      immediate('final', { guard: (ctx, data) => data.a >= 4 })
     )
     state('final')
   }
 
   function App() {
-    const [{ name, context }, send] = useMachine(machine, { a: 1 })
+    const { state, send } = useMachine(machine, {}, { a: 1 })
     return (
       <>
-        <div id='state'>State: {name}</div>
-        <div id='count'>Count: {context.a}</div>
+        <div id='state'>State: {state.name}</div>
+        <div id='count'>Count: {state.data.a}</div>
         <button id='increment' onClick={() => send('increment')} />
       </>
     )
@@ -70,18 +70,19 @@ test.serial('changing props automatically send assign event', (t) => {
     state('initial', immediate('counter'))
     state(
       'counter',
-      internal('assign', { assign: true }),
-      internal('changeThing', { assign: true })
+      internal('assign', { assign: (ctx, data) => ({ ...data, thang: ctx.thing + ctx.thing }) }),
+      internal('changeThang', { assign: true })
     )
   }
 
   function App({ thing }) {
-    const [{ name, context }, send] = useMachine(machine, { thing })
+    const { state, context, send } = useMachine(machine, { thing }, { thang: '' })
     return (
       <>
-        <div id='state'>State: {name}</div>
-        <div id='count'>Thing: {context.thing}</div>
-        <button id='changeThing' onClick={() => send({ type: 'changeThing', thing: 'c', x: 1 })} />
+        <div id='state'>Name: {state.name}</div>
+        <div id='thing'>Thing: {context.thing}</div>
+        <div id='thang'>Thang: {state.data.thang}</div>
+        <button id='changeThing' onClick={() => send({ type: 'changeThang', thang: 'c', x: 1 })} />
       </>
     )
   }
@@ -90,15 +91,17 @@ test.serial('changing props automatically send assign event', (t) => {
     render(<App thing='a' />, root)
   })
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Thing: a')
+  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
+  t.is(document.querySelector('#thing').innerHTML, 'Thing: a')
+  t.is(document.querySelector('#thang').innerHTML, 'Thang: ')
 
   act(() => {
     render(<App thing='b' />, root)
   })
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Thing: b')
+  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
+  t.is(document.querySelector('#thing').innerHTML, 'Thing: b')
+  t.is(document.querySelector('#thang').innerHTML, 'Thang: bb')
 
   click(dom, document.querySelector('#changeThing'))
 
@@ -106,8 +109,9 @@ test.serial('changing props automatically send assign event', (t) => {
     render(<App thing='b' />, root)
   })
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Thing: c')
+  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
+  t.is(document.querySelector('#thing').innerHTML, 'Thing: b')
+  t.is(document.querySelector('#thang').innerHTML, 'Thang: c')
 })
 
 test.serial('effects', (t) => {
@@ -118,12 +122,11 @@ test.serial('effects', (t) => {
 
   const eff = []
 
-  const machine = ({ state, enter, internal }) => {
+  const machine = ({ state, enter }) => {
     state(
       'counter',
-      internal('assign', { assign: true }),
       enter({
-        effect: (context, event, send) => {
+        effect: (context, data, event, send) => {
           eff.push('started')
           return () => {
             eff.push('finished')
@@ -134,10 +137,10 @@ test.serial('effects', (t) => {
   }
 
   function App({ thing }) {
-    const [{ name }] = useMachine(machine, { thing })
+    const { state } = useMachine(machine, { thing })
     return (
       <>
-        <div id='state'>State: {name}</div>
+        <div id='state'>State: {state.name}</div>
         <div id='count'>Effect: {eff.join(', ')}</div>
       </>
     )
