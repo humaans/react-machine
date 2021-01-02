@@ -141,9 +141,13 @@ test.serial('effects', (t) => {
     return (
       <>
         <div id='state'>State: {state.name}</div>
-        <div id='count'>Effect: {eff.join(', ')}</div>
+        <Child />
       </>
     )
+  }
+
+  function Child() {
+    return <div />
   }
 
   act(() => {
@@ -151,7 +155,6 @@ test.serial('effects', (t) => {
   })
 
   t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Effect: ')
   t.deepEqual(eff, ['started'])
 
   act(() => {
@@ -159,7 +162,6 @@ test.serial('effects', (t) => {
   })
 
   t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Effect: started')
   t.deepEqual(eff, ['started'])
 
   act(() => {
@@ -237,6 +239,343 @@ test.serial('internal transition effects', (t) => {
     'internal effect started',
   ])
 })
+
+test.serial('all types of effects with cleanup', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  let eff = []
+
+  const effect = (label) => (context, data, event, send) => {
+    eff.push(`${label} started`)
+    return () => {
+      eff.push(`${label} stopped`)
+    }
+  }
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      enter({ effect: effect('a.enter') }),
+      transition('next', 'b', { effect: effect('a.transition') }),
+      exit({ effect: effect('a.exit') })
+    )
+
+    state(
+      'b',
+      enter({ effect: effect('b.enter') }),
+      internal('retry', { effect: effect('b.internal') }),
+      transition('next', 'c', { effect: effect('b.transition') }),
+      exit({ effect: effect('b.exit') })
+    )
+
+    state(
+      'c',
+      enter({ effect: effect('c.enter') }),
+      immediate('d', { effect: effect('c.immediate') }),
+      exit({ effect: effect('c.exit') })
+    )
+
+    state('d')
+  }
+
+  function App() {
+    const { state, send } = useMachine(machine)
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='next' onClick={() => send('next')} />
+        <button id='retry' onClick={() => send('retry')} />
+      </>
+    )
+  }
+
+  const rerender = () => {
+    act(() => {
+      render(<App />, root)
+    })
+  }
+
+  eff = []
+  rerender()
+  t.deepEqual(eff, ['a.enter started'])
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, ['a.enter stopped', 'a.exit started', 'a.transition started', 'b.enter started'])
+
+  eff = []
+  click(dom, document.querySelector('#retry'))
+  rerender()
+  t.deepEqual(eff, ['b.internal started'])
+
+  eff = []
+  click(dom, document.querySelector('#retry'))
+  rerender()
+  t.deepEqual(eff, ['b.internal stopped', 'b.internal started'])
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, [
+    'b.internal stopped',
+    'b.enter stopped',
+    'a.transition stopped',
+    'a.exit stopped',
+    'b.exit started',
+    'b.exit stopped',
+    'b.transition started',
+    'b.transition stopped',
+    'c.enter started',
+    'c.enter stopped',
+    'c.exit started',
+    'c.immediate started',
+  ])
+
+  t.is(document.querySelector('#state').innerHTML, 'State: d')
+})
+
+test.serial('all types of effects without cleanup', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  let eff = []
+
+  const effect = (label) => (context, data, event, send) => {
+    eff.push(`${label} started`)
+  }
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      enter({ effect: effect('a.enter') }),
+      transition('next', 'b', { effect: effect('a.transition') }),
+      exit({ effect: effect('a.exit') })
+    )
+
+    state(
+      'b',
+      enter({ effect: effect('b.enter') }),
+      internal('retry', { effect: effect('b.internal') }),
+      transition('next', 'c', { effect: effect('b.transition') }),
+      exit({ effect: effect('b.exit') })
+    )
+
+    state(
+      'c',
+      enter({ effect: effect('c.enter') }),
+      immediate('d', { effect: effect('c.immediate') }),
+      exit({ effect: effect('c.exit') })
+    )
+
+    state('d')
+  }
+
+  function App() {
+    const { state, send } = useMachine(machine)
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='next' onClick={() => send('next')} />
+        <button id='retry' onClick={() => send('retry')} />
+      </>
+    )
+  }
+
+  const rerender = () => {
+    act(() => {
+      render(<App />, root)
+    })
+  }
+
+  eff = []
+  rerender()
+  t.deepEqual(eff, ['a.enter started'])
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, ['a.exit started', 'a.transition started', 'b.enter started'])
+
+  eff = []
+  click(dom, document.querySelector('#retry'))
+  rerender()
+  t.deepEqual(eff, ['b.internal started'])
+
+  eff = []
+  click(dom, document.querySelector('#retry'))
+  rerender()
+  t.deepEqual(eff, ['b.internal started'])
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, [
+    'b.exit started',
+    'b.transition started',
+    'c.enter started',
+    'c.exit started',
+    'c.immediate started',
+  ])
+
+  t.is(document.querySelector('#state').innerHTML, 'State: d')
+})
+
+test.serial('effect sending an event', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  let eff = []
+  let state
+
+  const effect = (label) => (context, data, event, send) => {
+    // both effects see the original state data
+    t.deepEqual(data, { a: 1 })
+
+    eff.push(`${label} started`)
+
+    // further state updates are queued, not executed immediately
+    send({ type: 'assign', b: 2 })
+
+    return () => {
+      eff.push(`${label} stopped`)
+    }
+  }
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      enter({ effect: effect('enter1'), assign: { a: 1 } }),
+      enter({ effect: effect('enter2') }),
+      internal('assign', { assign: true }),
+      transition('next', 'b')
+    )
+
+    state('b')
+  }
+
+  function App() {
+    const { state: _state, send } = useMachine(machine)
+    state = _state
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='next' onClick={() => send('next')} />
+      </>
+    )
+  }
+
+  const rerender = () => {
+    act(() => {
+      render(<App />, root)
+    })
+  }
+
+  eff = []
+  rerender()
+  t.deepEqual(eff, ['enter1 started', 'enter2 started'])
+  t.deepEqual(state, { name: 'a', data: { a: 1, b: 2 } })
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, ['enter2 stopped', 'enter1 stopped'])
+  t.deepEqual(state, { name: 'b', data: { a: 1, b: 2 }, final: true })
+})
+
+test.serial('sending consecutive events', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  let eff = []
+  let state
+
+  const effect = (label, val) => (context, data, event, send) => {
+    // all effects see the original state data
+    // t.deepEqual(data, { a: 1 })
+
+    eff.push(`${label} started`)
+
+    // further state updates are queued, not executed immediately
+    send({ type: 'assign', e: val })
+
+    return () => {
+      eff.push(`${label} stopped`)
+    }
+  }
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      enter({ effect: effect('a.enter', 11), assign: { a: 1 } }),
+      internal('assign', { assign: true }),
+      transition('next', 'b', { effect: effect('a.transition', 22) })
+    )
+
+    state('b', enter({ effect: effect('b.enter', 33), assign: { b: 2 } }), transition('next', 'c'))
+
+    state('c')
+  }
+
+  function App() {
+    const { state: _state, send } = useMachine(machine)
+    state = _state
+
+    const doubleSend = () => {
+      send('next')
+      send('next')
+    }
+
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='next' onClick={doubleSend} />
+      </>
+    )
+  }
+
+  const rerender = () => {
+    act(() => {
+      render(<App />, root)
+    })
+  }
+
+  eff = []
+  rerender()
+  t.deepEqual(eff, ['a.enter started'])
+  t.deepEqual(state, { name: 'a', data: { a: 1, e: 11 } })
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+
+  t.deepEqual(eff, [
+    'a.enter stopped',
+    'a.transition started',
+    'a.transition stopped',
+    'b.enter started',
+    'b.enter stopped',
+  ])
+  t.deepEqual(state, { name: 'c', data: { a: 1, b: 2, e: 11 }, final: true })
+})
+
+//
+// Test
+//  count renders of parent, machine component, child
+//    when context changes
+//    when context changes + guard is triggered
+
+// Test
+//  what happens with external self transitions
 
 function click(dom, el) {
   return el.dispatchEvent(
