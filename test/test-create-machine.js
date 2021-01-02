@@ -189,8 +189,10 @@ test('enter invoke', async (t) => {
 
   t.deepEqual(machine.state, { name: 'b', data: {} })
 
+  let max = 50
   while (!machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
+    if (max-- < 0) throw new Error('Failed to settle')
   }
 
   t.is(machine.state.name, 'a')
@@ -198,8 +200,10 @@ test('enter invoke', async (t) => {
 
   machine.send('go')
 
+  max = 50
   while (machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
+    if (max-- < 0) throw new Error('Failed to settle')
   }
 
   t.is(machine.state.name, 'c')
@@ -355,7 +359,6 @@ test('simple machine', (t) => {
   })
 
   t.deepEqual(machine.runningEffects, [])
-  t.deepEqual(machine.pendingEffects, [])
   t.is(typeof machine.subscribe, 'function')
   t.is(typeof machine.send, 'function')
   t.is(typeof machine.stop, 'function')
@@ -367,7 +370,6 @@ test('simple machine', (t) => {
     'subscribe',
     'machine',
     'stop',
-    'pendingEffects',
     'runningEffects',
   ])
 

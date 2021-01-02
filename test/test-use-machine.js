@@ -170,6 +170,74 @@ test.serial('effects', (t) => {
   t.deepEqual(eff, ['started', 'finished'])
 })
 
+test.serial('internal transition effects', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  const eff = []
+
+  function enterEffect(context, data, event, send) {
+    eff.push('enter effect started')
+    return () => {
+      eff.push('enter effect finished')
+    }
+  }
+
+  function internalEffect(context, data, event, send) {
+    eff.push('internal effect started')
+    return () => {
+      eff.push('internal effect finished')
+    }
+  }
+
+  const machine = ({ state, enter, internal }) => {
+    state(
+      'counter',
+      enter({ effect: enterEffect }),
+      internal('increment', { effect: internalEffect })
+    )
+  }
+
+  function App() {
+    const { state, send } = useMachine(machine)
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='increment' onClick={() => send('increment')} />
+      </>
+    )
+  }
+
+  act(() => {
+    render(<App />, root)
+  })
+
+  t.deepEqual(eff, ['enter effect started'])
+
+  click(dom, document.querySelector('#increment'))
+
+  act(() => {
+    render(<App />, root)
+  })
+
+  t.deepEqual(eff, ['enter effect started', 'internal effect started'])
+
+  click(dom, document.querySelector('#increment'))
+
+  act(() => {
+    render(<App />, root)
+  })
+
+  t.deepEqual(eff, [
+    'enter effect started',
+    'internal effect started',
+    'internal effect finished',
+    'internal effect started',
+  ])
+})
+
 function click(dom, el) {
   return el.dispatchEvent(
     new dom.window.MouseEvent('click', {

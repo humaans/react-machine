@@ -304,7 +304,8 @@ state('save',
 
 #### V1
 
-- [ ] add debug logging option
+- [x] decomplect machine context from state data
+- [ ] add an option to enable debug logging
 - [ ] write proper TypeScript type definitions
 - [ ] review the final state logic, e.g. wrt to internal transitions
 - [ ] review the `action` hook, it's not ok to call things in the middle of `dispatch`, consider collecting actions upfront and calling them before dispatching the event to the reducer, this way actions get called before the transition, eagerly, and effects run after, as it's common to call various functions directly in event handlers, e.g. `onClick={() => close()}`
@@ -312,22 +313,10 @@ state('save',
 #### V2
 
 - [ ] add hierarchical and parallel states
-- [ ] only new effects are run, old ones can stay running
+- [ ] introduce initial and final states
 - [ ] change from state.name string to state.value object
 - [ ] introduce state.matches() api
 
 #### V3
 
 - [ ] add compatibility with XState visualiser, serialize into compatible JSON
-
-### React integration requirements
-
-1. If no assign provided, do not double render.
-2. If no guards trigger, do not double render.
-3. Trigger actions before transitioning the component state. (test if it's ok to sequence event -> parent rerender -> component state dispatch).
-
-- [ ] Collect all enter effects - only run effects of the target state, not intermediate ones
-- [ ] Collect all exit effects - only run effects on the leaving state, not intermediate ones
-- [ ] Collect all transition effects - all of them get queued
-- [ ] Collect all immmediate effects - all of them get queued
-- [ ] Collect all internal effects - all of them get queued, but the state effects continue running - this is where we'll need to introduce the ID checks in runEffects to see what effects should continue running or similar.
