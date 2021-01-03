@@ -30,7 +30,7 @@ import { useMachine } from 'react-machine'
 
 const isSuccess = ctx => ctx.item.status === 'success'
 const isError = ctx => ctx.item.status === 'error'
-const increment = (ctx, state) => ({ ...state, count: state.count + 1 })
+const increment = (ctx, data) => ({ ...data, count: data.count + 1 })
 const retry = ctx => ctx.retry()
 
 const machine = ({ state, transition, immediate, internal, enter }) => {
@@ -81,7 +81,7 @@ Robot is a great Finite State Machine library with integrations into React, Prea
 
 XState is the most powerful modern state chart / state machine implementation for JavaScript. It's rich in features and supports React and Vue out of the box. Here are some differences:
 
-- `react-machine` strives to create a smaller surface area, less features, less options, less packages. This could be seen as a good or a bad thing depending on your perspective and your requirements. The goal is to seek _simplicy_, which can be subjective. For example, you will not find actors, machine inter messaging, delayed events or history states in `react-machine`.
+- `react-machine` strives to create a smaller surface area, less features, less options, less packages. This could be seen as a good or a bad thing depending on your perspective and your requirements. The goal is to seek _simplicity_, which can be subjective. For example, you will not find actors, machine inter messaging, delayed events or history states in `react-machine`.
 - related to the point above, full compatibility / serialisation to SCXML is a non goal for `react-machine`, SCXML (and it's interpration algorithm in particular) is only used to guide the implementation of `react-machine`.
 - `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future.
 - XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future.
@@ -253,8 +253,8 @@ If the guard condition fails, the transition is skipped when matching against th
 Updated context based on current context and the incoming event.
 
 ```js
-{ reduce: (context, event) => nextContext }
-{ reduce: (context, { type, ...payload }) => nextContext }
+{ reduce: (context, data, event) => nextData }
+{ reduce: (context, data, { type, ...payload }) => nextData }
 { reduce: [reduce1, reduce2] }
 ```
 
@@ -263,9 +263,9 @@ Updated context based on current context and the incoming event.
 Return a partial context update object, that will be immutably assigned to the current context. A commonly useful shortcut for assigning event paylods to the context.
 
 ```js
-{ assign: (context, { type, ...payload }) => ({ ...context , ...payload }) }
+{ assign: (context, data, { type, ...payload }) => ({ ...data , ...payload }) }
 { assign: true } // same as above
-{ assign: { static: 'value' } }
+{ assign: { some: 'value' } }
 { assign: [assign1, assign2] }
 ```
 
@@ -275,9 +275,9 @@ A way to invoke async functions as part of entering a state. If the promise is f
 
 ```js
 state('save',
-  enter({ invoke: async (context, event) => context.save() }),
-  transition('done', 'show', { assign: (ctx, event) => ({ item: event.data }) }),
-  transition('error', 'edit', { assign: (ctx, event) => ({ error: event.error }) }),
+  enter({ invoke: async (context, data, event) => context.save() }),
+  transition('done', 'show', { assign: (ctx, data, event) => ({ item: event.data }) }),
+  transition('error', 'edit', { assign: (ctx, data, event) => ({ error: event.error }) }),
 )
 ```
 
@@ -286,8 +286,8 @@ state('save',
 A way of handling side effects, async effects, subscriptions or activities. Once the state is entered, the effect gets started (in `useEffect` and only after finalising all of the immediate transitions) and can send any number of events. Note that `context` will be valid when initially running the effect, but will get stale afterwards, and is best read in subsequent internal transitions. Also note that `send` will be ignored after the effect is cleaned up, and similarly `send` can not be used in the cleanup function of the effect.
 
 ```js
-const addPing = (ctx, event) => ({ pings: ctx.pings.concat(event.ping) })
-const listenToPings = (context, event, send) => {
+const addPing = (ctx, data, event) => ({ pings: data.pings.concat(event.ping) })
+const listenToPings = (context, data, event, send) => {
   const cancel = context.ponger.subscribe((ping) => {
     send({ type: 'ping', ping })
   })
@@ -304,18 +304,17 @@ state('save',
 
 #### V1
 
-- [x] decomplect machine context from state data
+- [x] decomplect machine context from state data (see [Changelog](CHANGELOG.md))
+- [x] remove the concept of actions in favor of effects (see [Changelog](CHANGELOG.md))
 - [ ] add an option to enable debug logging
 - [ ] write proper TypeScript type definitions
-- [ ] review the final state logic, e.g. wrt to internal transitions
-- [ ] review the `action` hook, it's not ok to call things in the middle of `dispatch`, consider collecting actions upfront and calling them before dispatching the event to the reducer, this way actions get called before the transition, eagerly, and effects run after, as it's common to call various functions directly in event handlers, e.g. `onClick={() => close()}`
 
 #### V2
 
 - [ ] add hierarchical and parallel states
 - [ ] introduce initial and final states
 - [ ] change from state.name string to state.value object
-- [ ] introduce state.matches() api
+- [ ] introduce matches() api
 
 #### V3
 
