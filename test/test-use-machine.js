@@ -326,11 +326,11 @@ test.serial('all types of effects with cleanup', (t) => {
     'a.transition stopped',
     'a.exit stopped',
     'b.exit started',
-    'b.exit stopped',
     'b.transition started',
-    'b.transition stopped',
     'c.enter started',
     'c.enter stopped',
+    'b.transition stopped',
+    'b.exit stopped',
     'c.exit started',
     'c.immediate started',
   ])
@@ -499,9 +499,9 @@ test.serial('sending consecutive events', (t) => {
   let eff = []
   let state
 
-  const effect = (label, val) => (context, data, event, send) => {
+  const effect = (label, val, expectedData) => (context, data, event, send) => {
     // all effects see the original state data
-    // t.deepEqual(data, { a: 1 })
+    t.deepEqual(data, expectedData)
 
     eff.push(`${label} started`)
 
@@ -516,12 +516,19 @@ test.serial('sending consecutive events', (t) => {
   const machine = ({ state, enter, exit, transition, internal, immediate }) => {
     state(
       'a',
-      enter({ effect: effect('a.enter', 11), assign: { a: 1 } }),
+      enter({ effect: effect('a.enter', 11, { a: 1 }), assign: { a: 1 } }),
       internal('assign', { assign: true }),
-      transition('next', 'b', { effect: effect('a.transition', 22) })
+      transition('next', 'b', {
+        effect: effect('a.transition', 22, { a: 1, e: 11, b: 2 }),
+        assign: { b: 2 },
+      })
     )
 
-    state('b', enter({ effect: effect('b.enter', 33), assign: { b: 2 } }), transition('next', 'c'))
+    state(
+      'b',
+      enter({ effect: effect('b.enter', 33, { a: 1, e: 11, b: 2, c: 3 }), assign: { c: 3 } }),
+      transition('next', 'c')
+    )
 
     state('c')
   }
@@ -561,11 +568,74 @@ test.serial('sending consecutive events', (t) => {
   t.deepEqual(eff, [
     'a.enter stopped',
     'a.transition started',
-    'a.transition stopped',
     'b.enter started',
     'b.enter stopped',
+    'a.transition stopped',
   ])
-  t.deepEqual(state, { name: 'c', data: { a: 1, b: 2, e: 11 }, final: true })
+  t.deepEqual(state, { name: 'c', data: { a: 1, b: 2, c: 3, e: 11 }, final: true })
+})
+
+test.serial('external self transition', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  let eff = []
+  let state
+
+  const effect = (label, val) => (context, data, event, send) => {
+    eff.push(`${label} started`)
+    return () => {
+      eff.push(`${label} stopped`)
+    }
+  }
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      enter({ effect: effect('a.enter', 11), assign: { a: 1 } }),
+      transition('assign', 'a', { assign: true, effect: effect('a.transition') }),
+      transition('next', 'b')
+    )
+
+    state('b')
+  }
+
+  function App() {
+    const { state: _state, send } = useMachine(machine)
+    state = _state
+
+    return (
+      <>
+        <div id='state'>State: {state.name}</div>
+        <button id='next' onClick={() => send('next')} />
+        <button id='assign' onClick={() => send('assign')} />
+      </>
+    )
+  }
+
+  const rerender = () => {
+    act(() => {
+      render(<App />, root)
+    })
+  }
+
+  eff = []
+  rerender()
+  t.deepEqual(eff, ['a.enter started'])
+  t.deepEqual(state, { name: 'a', data: { a: 1 } })
+
+  eff = []
+  click(dom, document.querySelector('#assign'))
+  rerender()
+  t.deepEqual(eff, ['a.enter stopped', 'a.transition started', 'a.enter started'])
+
+  eff = []
+  click(dom, document.querySelector('#next'))
+  rerender()
+  t.deepEqual(eff, ['a.enter stopped', 'a.transition stopped'])
+  t.deepEqual(state, { name: 'b', data: { a: 1 }, final: true })
 })
 
 //
@@ -573,9 +643,6 @@ test.serial('sending consecutive events', (t) => {
 //  count renders of parent, machine component, child
 //    when context changes
 //    when context changes + guard is triggered
-
-// Test
-//  what happens with external self transitions
 
 function click(dom, el) {
   return el.dispatchEvent(
