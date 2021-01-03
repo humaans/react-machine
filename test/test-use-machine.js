@@ -638,6 +638,119 @@ test.serial('external self transition', (t) => {
   t.deepEqual(state, { name: 'b', data: { a: 1 }, final: true })
 })
 
+test.serial('context changes are handled efficiently', (t) => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>')
+  global.window = dom.window
+  global.document = dom.window.document
+  const root = document.getElementById('root')
+
+  const fooIsLarge = (ctx, data) => ctx.foo >= 3
+  const barIsLarge = (ctx, data) => ctx.bar >= 3
+  const multiplyBar = (ctx, data) => ({ ...data, derivedBar: ctx.bar * 2 })
+
+  const machine = ({ state, enter, exit, transition, internal, immediate }) => {
+    state(
+      'a',
+      transition('next', 'b'),
+      internal('assign', { guard: barIsLarge, reduce: multiplyBar }),
+      immediate('b', { guard: fooIsLarge })
+    )
+    state('b')
+  }
+
+  let state
+
+  const renderCounts = {
+    app: 0,
+    componentWithMachine: 0,
+    child: 0,
+  }
+
+  function App({ foo, bar }) {
+    renderCounts.app++
+    return <ComponentWithMachine foo={foo} bar={bar} />
+  }
+
+  function ComponentWithMachine({ foo, bar }) {
+    renderCounts.componentWithMachine++
+
+    const { state: _state } = useMachine(machine, { foo, bar })
+
+    state = _state
+
+    return <Child foo={foo} bar={bar} derivedBar={state.data.derivedBar} />
+  }
+
+  function Child({ foo, bar, derivedBar }) {
+    renderCounts.child++
+    return (
+      <>
+        <div id='foo'>{foo}</div>
+        <div id='bar'>{bar}</div>
+        <div id='derivedBar'>{derivedBar}</div>
+      </>
+    )
+  }
+
+  const rerender = ({ foo, bar }) => {
+    act(() => {
+      render(<App foo={foo} bar={bar} />, root)
+    })
+  }
+
+  rerender({ foo: 1, bar: 2 })
+  t.deepEqual(state, { name: 'a', data: {} })
+  t.deepEqual(renderCounts, {
+    app: 1,
+    componentWithMachine: 1,
+    child: 1,
+  })
+
+  t.is(document.querySelector('#foo').innerHTML, '1')
+  t.is(document.querySelector('#bar').innerHTML, '2')
+  t.is(document.querySelector('#derivedBar').innerHTML, '')
+
+  rerender({ foo: 2, bar: 2 })
+  t.deepEqual(state, { name: 'a', data: {} })
+  t.deepEqual(renderCounts, {
+    app: 2,
+    componentWithMachine: 2,
+    child: 2,
+  })
+
+  t.is(document.querySelector('#foo').innerHTML, '2')
+  t.is(document.querySelector('#bar').innerHTML, '2')
+  t.is(document.querySelector('#derivedBar').innerHTML, '')
+
+  rerender({ foo: 2, bar: 3 })
+  t.deepEqual(state, { name: 'a', data: { derivedBar: 6 } })
+  t.deepEqual(renderCounts, {
+    app: 3,
+    componentWithMachine: 4,
+    child: 4,
+  })
+
+  t.is(document.querySelector('#foo').innerHTML, '2')
+  t.is(document.querySelector('#bar').innerHTML, '3')
+  t.is(document.querySelector('#derivedBar').innerHTML, '6')
+
+  // adds 3 more renders
+  //  1 - top down re-render
+  //  2 - changed context cause an immediate transition to b
+  //  3 - exiting state a causes effects to get flushed
+  rerender({ foo: 3, bar: 3 })
+  t.deepEqual(state, { name: 'b', data: { derivedBar: 6 }, final: true })
+  t.deepEqual(renderCounts, {
+    app: 4,
+    componentWithMachine: 6,
+    child: 6,
+  })
+
+  t.is(document.querySelector('#foo').innerHTML, '3')
+  t.is(document.querySelector('#bar').innerHTML, '3')
+  t.is(document.querySelector('#derivedBar').innerHTML, '6')
+})
+
 //
 // Test
 //  count renders of parent, machine component, child
