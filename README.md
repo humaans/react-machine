@@ -147,7 +147,7 @@ Create and initialise the machine.
 Available options:
 
 - `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
-- `deps` - by default all context values are checked for changes in between hook invocations. Use this option to customize the dependency array. TODO UPDATE
+- `areEqual` (default: compare object values) - by default all context values are checked for changes on each render. Use this option to customize how equality is computed when comparing the previous context with the new context.
 
 Returns `[state, send, machine]`:
 

@@ -76,12 +76,13 @@ test.serial('changing props automatically send assign event', (t) => {
   }
 
   function App({ thing }) {
-    const { state, context, send } = useMachine(machine, { thing }, { thang: '' })
+    const { state, context, send } = useMachine(machine, { thing }, { thang: 'x' })
     return (
       <>
         <div id='state'>Name: {state.name}</div>
-        <div id='thing'>Thing: {context.thing}</div>
-        <div id='thang'>Thang: {state.data.thang}</div>
+        <div id='props-thing'>Props thing: {thing}</div>
+        <div id='context-thing'>Context thing: {context.thing}</div>
+        <div id='derived-thang'>Derived thang: {state.data.thang}</div>
         <button id='changeThing' onClick={() => send({ type: 'changeThang', thang: 'c', x: 1 })} />
       </>
     )
@@ -92,26 +93,25 @@ test.serial('changing props automatically send assign event', (t) => {
   })
 
   t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#thing').innerHTML, 'Thing: a')
-  t.is(document.querySelector('#thang').innerHTML, 'Thang: ')
+  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: a')
+  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: a')
+  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: x')
 
   act(() => {
     render(<App thing='b' />, root)
   })
 
   t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#thing').innerHTML, 'Thing: b')
-  t.is(document.querySelector('#thang').innerHTML, 'Thang: bb')
+  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: b')
+  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: b')
+  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: bb')
 
   click(dom, document.querySelector('#changeThing'))
 
-  act(() => {
-    render(<App thing='b' />, root)
-  })
-
   t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#thing').innerHTML, 'Thing: b')
-  t.is(document.querySelector('#thang').innerHTML, 'Thang: c')
+  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: b')
+  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: b')
+  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: c')
 })
 
 test.serial('effects', (t) => {
@@ -714,7 +714,7 @@ test.serial('context changes are handled efficiently', (t) => {
   t.deepEqual(state, { name: 'a', data: {} })
   t.deepEqual(renderCounts, {
     app: 2,
-    componentWithMachine: 2,
+    componentWithMachine: 3,
     child: 2,
   })
 
@@ -726,29 +726,34 @@ test.serial('context changes are handled efficiently', (t) => {
   t.deepEqual(state, { name: 'a', data: { derivedBar: 6 } })
   t.deepEqual(renderCounts, {
     app: 3,
-    componentWithMachine: 4,
-    child: 4,
+    componentWithMachine: 5,
+    child: 3,
   })
 
   t.is(document.querySelector('#foo').innerHTML, '2')
   t.is(document.querySelector('#bar').innerHTML, '3')
   t.is(document.querySelector('#derivedBar').innerHTML, '6')
 
-  // adds 3 more renders
-  //  1 - top down re-render
-  //  2 - changed context cause an immediate transition to b
-  //  3 - exiting state a causes effects to get flushed
   rerender({ foo: 3, bar: 3 })
   t.deepEqual(state, { name: 'b', data: { derivedBar: 6 }, final: true })
   t.deepEqual(renderCounts, {
     app: 4,
-    componentWithMachine: 6,
-    child: 6,
+    componentWithMachine: 7,
+    child: 4,
   })
 
   t.is(document.querySelector('#foo').innerHTML, '3')
   t.is(document.querySelector('#bar').innerHTML, '3')
   t.is(document.querySelector('#derivedBar').innerHTML, '6')
+
+  // rerender with the same props, everything re-renders only once
+  rerender({ foo: 3, bar: 3 })
+  t.deepEqual(state, { name: 'b', data: { derivedBar: 6 }, final: true })
+  t.deepEqual(renderCounts, {
+    app: 5,
+    componentWithMachine: 8,
+    child: 5,
+  })
 })
 
 //
