@@ -5,67 +5,108 @@ import { createService as createMachine } from '../lib/service.js'
 
 test('empty machine', (t) => {
   const machine1 = createMachine()
-  t.deepEqual(machine1.state, { name: null, context: {} })
+  t.deepEqual(machine1.state, { name: null, data: {} })
 
   const machine2 = createMachine(() => {})
-  t.deepEqual(machine2.state, { name: null, context: {} })
-
-  const machine3 = createMachine(() => {}, { a: 1 })
-  t.deepEqual(machine3.state, { name: null, context: { a: 1 } })
+  t.deepEqual(machine2.state, { name: null, data: {} })
 })
 
 test('initial transition', (t) => {
-  const machine = createMachine(
-    ({ state, enter }) => {
-      state('foo', enter({ assign: { b: 2 } }))
+  const machine1 = createMachine(({ initial, state, enter }) => {
+    initial('bar')
+    state('foo', enter({ assign: { foo: true } }))
+    state('bar', enter({ assign: { bar: true } }))
+  })
+  t.deepEqual(machine1.state, {
+    name: 'bar',
+    data: { bar: true },
+    final: true,
+  })
+
+  const machine2 = createMachine(({ initial, state, enter }) => {
+    initial('bar', { baz: true })
+    state('foo', enter({ assign: { foo: true } }))
+    state('bar', enter({ assign: { bar: true } }))
+  })
+  t.deepEqual(machine2.state, {
+    name: 'bar',
+    data: { bar: true, baz: true },
+    final: true,
+  })
+
+  const machine3 = createMachine(
+    ({ initial, state, enter }) => {
+      initial('bar', (ctx) => ({ baz: ctx.baz }))
+      state('foo', enter({ assign: { foo: true } }))
+      state('bar', enter({ assign: { bar: true } }))
     },
-    { a: 1 }
+    { baz: 123 }
   )
-  t.deepEqual(machine.state, {
+  t.deepEqual(machine3.state, {
+    name: 'bar',
+    data: { bar: true, baz: 123 },
+    final: true,
+  })
+
+  const machine4 = createMachine(
+    ({ initial, state, enter }) => {
+      initial((ctx) => ({ baz: ctx.baz }))
+      state('foo', enter({ assign: { foo: true } }))
+      state('bar', enter({ assign: { bar: true } }))
+    },
+    { baz: 123 }
+  )
+  t.deepEqual(machine4.state, {
     name: 'foo',
-    context: { a: 1, b: 2 },
+    data: { foo: true, baz: 123 },
     final: true,
   })
 })
 
 test('transition guard', (t) => {
   const machine = createMachine(({ state, transition }) => {
-    state('a', transition('go', 'b', { guard: (ctx, event) => event.ok }))
+    state('a', transition('go', 'b', { guard: (ctx, data, event) => event.ok }))
     state('b')
   })
 
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send('go')
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send({ type: 'go', ok: true })
-  t.deepEqual(machine.state, { name: 'b', context: {}, final: true })
+  t.deepEqual(machine.state, { name: 'b', data: {}, final: true })
 })
 
 test('transition reduce', (t) => {
   const machine = createMachine(
-    ({ state, transition }) => {
-      state('a', transition('go', 'b', { reduce: (ctx, event) => ({ a: ctx.a, c: event.data }) }))
+    ({ initial, state, transition }) => {
+      initial({ a: 1, b: 2 })
+      state(
+        'a',
+        transition('go', 'b', {
+          reduce: (ctx, data, event) => ({ a: data.a + 5, c: ctx.c, d: event.value }),
+        })
+      )
       state('b')
     },
-    { a: 1, b: 2 }
+    { c: 0 }
   )
 
-  t.deepEqual(machine.state, { name: 'a', context: { a: 1, b: 2 } })
+  t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
-  machine.send({ type: 'go', data: 3 })
-  t.deepEqual(machine.state, { name: 'b', context: { a: 1, c: 3 }, final: true })
+  machine.send({ type: 'go', value: 3 })
+  t.deepEqual(machine.state, { name: 'b', data: { a: 6, c: 0, d: 3 }, final: true })
 })
 
 test('transition assign', (t) => {
   const x = true
   const y = { z: 'foo' }
-  const z = (ctx, d) => {
-    for (const key of Object.keys(d)) {
-      d[key] = 'prefix' + d[key]
+  const z = (ctx, data, payload) => {
+    for (const key of Object.keys(payload)) {
+      payload[key] = 'prefix' + payload[key]
     }
-    return d
+    return payload
   }
 
   const machine = createMachine(({ state, transition, immediate }) => {
@@ -74,37 +115,35 @@ test('transition assign', (t) => {
   })
 
   t.is(machine.state.name, 'a')
-  t.deepEqual(machine.state.context, {})
+  t.deepEqual(machine.state.data, {})
 
   machine.send({ type: 'go', x: 1, y: 2 })
   t.is(machine.state.name, 'b')
-  t.deepEqual(machine.state.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
+  t.deepEqual(machine.state.data, { x: 'prefix1', y: 'prefix2', z: 'foo' })
 })
 
-test('transition action', (t) => {
-  let actionCalledWith = null
+test('transition effect', (t) => {
+  let effectCalledWith = null
 
-  const machine = createMachine(
-    ({ state, transition }) => {
-      state(
-        'a',
-        transition('go', 'b', {
-          action: (ctx, event) => {
-            actionCalledWith = event
-            return { unused: 123 }
-          },
-        })
-      )
-      state('b')
-    },
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition }) => {
+    initial({ a: 1, b: 2 })
+    state(
+      'a',
+      transition('go', 'b', {
+        effect: (ctx, data, event) => {
+          effectCalledWith = event
+          return { unused: 123 }
+        },
+      })
+    )
+    state('b')
+  })
 
-  t.deepEqual(machine.state, { name: 'a', context: { a: 1, b: 2 } })
+  t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
-  machine.send({ type: 'go', data: 3 })
-  t.deepEqual(machine.state, { name: 'b', context: { a: 1, b: 2 }, final: true })
-  t.deepEqual(actionCalledWith, { type: 'go', data: 3 })
+  machine.send({ type: 'go', value: 3 })
+  t.deepEqual(machine.state, { name: 'b', data: { a: 1, b: 2 }, final: true })
+  t.deepEqual(effectCalledWith, { type: 'go', value: 3 })
 })
 
 test('enter guard is ignored', (t) => {
@@ -113,35 +152,33 @@ test('enter guard is ignored', (t) => {
     state('b', enter({ guard: (ctx, event) => event.ok }))
   })
 
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send({ type: 'go' })
-  t.deepEqual(machine.state, { name: 'b', context: {}, final: true })
+  t.deepEqual(machine.state, { name: 'b', data: {}, final: true })
 })
 
 test('enter reduce', (t) => {
-  const machine = createMachine(
-    ({ state, transition, enter }) => {
-      state('a', transition('go', 'b'))
-      state('b', enter({ reduce: (ctx, event) => ({ a: ctx.a, c: event.data }) }))
-    },
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition, enter }) => {
+    initial({ a: 1, b: 2 })
+    state('a', transition('go', 'b'))
+    state('b', enter({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) }))
+  })
 
-  t.deepEqual(machine.state, { name: 'a', context: { a: 1, b: 2 } })
+  t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
-  machine.send({ type: 'go', data: 3 })
-  t.deepEqual(machine.state, { name: 'b', context: { a: 1, c: 3 }, final: true })
+  machine.send({ type: 'go', value: 3 })
+  t.deepEqual(machine.state, { name: 'b', data: { a: 1, c: 3 }, final: true })
 })
 
 test('enter assign', (t) => {
   const x = true
   const y = { z: 'foo' }
-  const z = (ctx, d) => {
-    for (const key of Object.keys(d)) {
-      d[key] = 'prefix' + d[key]
+  const z = (ctx, data, p) => {
+    for (const key of Object.keys(p)) {
+      p[key] = 'prefix' + p[key]
     }
-    return d
+    return p
   }
 
   const machine = createMachine(({ state, transition, enter }) => {
@@ -150,37 +187,11 @@ test('enter assign', (t) => {
   })
 
   t.is(machine.state.name, 'a')
-  t.deepEqual(machine.state.context, {})
+  t.deepEqual(machine.state.data, {})
 
   machine.send({ type: 'go', x: 1, y: 2 })
   t.is(machine.state.name, 'b')
-  t.deepEqual(machine.state.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
-})
-
-test('enter action', (t) => {
-  let actionCalledWith = null
-
-  const machine = createMachine(
-    ({ state, transition, enter }) => {
-      state('a', transition('go', 'b'))
-      state(
-        'b',
-        enter({
-          action: (ctx, event) => {
-            actionCalledWith = event
-            return { unused: 123 }
-          },
-        })
-      )
-    },
-    { a: 1, b: 2 }
-  )
-
-  t.deepEqual(machine.state, { name: 'a', context: { a: 1, b: 2 } })
-
-  machine.send({ type: 'go', data: 3 })
-  t.deepEqual(machine.state, { name: 'b', context: { a: 1, b: 2 }, final: true })
-  t.deepEqual(actionCalledWith, { type: 'go', data: 3 })
+  t.deepEqual(machine.state.data, { x: 'prefix1', y: 'prefix2', z: 'foo' })
 })
 
 test('enter invoke', async (t) => {
@@ -195,35 +206,39 @@ test('enter invoke', async (t) => {
     state('c')
   })
 
-  async function save(context) {
-    if (context.error) return { id: 1, name: 'hello' }
+  async function save(context, data) {
+    if (data.error) return { id: 1, name: 'hello' }
     throw new Error('Fails the first time')
   }
 
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send('go')
 
-  t.deepEqual(machine.state, { name: 'b', context: {} })
+  t.deepEqual(machine.state, { name: 'b', data: {} })
 
-  while (!machine.state.context.error) {
+  let max = 50
+  while (!machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
+    if (max-- < 0) throw new Error('Failed to settle')
   }
 
   t.is(machine.state.name, 'a')
-  t.is(machine.state.context.error.message, 'Fails the first time')
+  t.is(machine.state.data.error.message, 'Fails the first time')
 
   machine.send('go')
 
-  while (machine.state.context.error) {
+  max = 50
+  while (machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
+    if (max-- < 0) throw new Error('Failed to settle')
   }
 
   t.is(machine.state.name, 'c')
   t.deepEqual(machine.state, {
     name: 'c',
-    context: {
-      data: { id: 1, name: 'hello' },
+    data: {
+      result: { id: 1, name: 'hello' },
       error: null,
     },
     final: true,
@@ -242,37 +257,37 @@ test('enter effect', async (t) => {
     state('c')
   })
 
-  function save(context, event, send) {
+  function save(context, data, event, send) {
     Promise.resolve('defer').then(() => {
-      if (context.error) return send({ type: 'done', data: { id: 1, name: 'hello' } })
+      if (data.error) return send({ type: 'done', result: { id: 1, name: 'hello' } })
       send({ type: 'error', error: new Error('Fails the first time') })
     })
   }
 
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send('go')
 
-  t.deepEqual(machine.state, { name: 'b', context: {} })
+  t.deepEqual(machine.state, { name: 'b', data: {} })
 
-  while (!machine.state.context.error) {
+  while (!machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
   }
 
   t.is(machine.state.name, 'a')
-  t.is(machine.state.context.error.message, 'Fails the first time')
+  t.is(machine.state.data.error.message, 'Fails the first time')
 
   machine.send('go')
 
-  while (machine.state.context.error) {
+  while (machine.state.data.error) {
     await new Promise((resolve) => setTimeout(resolve), 4)
   }
 
   t.is(machine.state.name, 'c')
   t.deepEqual(machine.state, {
     name: 'c',
-    context: {
-      data: { id: 1, name: 'hello' },
+    data: {
+      result: { id: 1, name: 'hello' },
       error: null,
     },
     final: true,
@@ -285,39 +300,37 @@ test('exit guard is ignored', (t) => {
     state('b')
   })
 
-  t.deepEqual(machine.state, { name: 'a', context: {} })
+  t.deepEqual(machine.state, { name: 'a', data: {} })
 
   machine.send({ type: 'go' })
-  t.deepEqual(machine.state, { name: 'b', context: {}, final: true })
+  t.deepEqual(machine.state, { name: 'b', data: {}, final: true })
 })
 
 test('exit reduce', (t) => {
-  const machine = createMachine(
-    ({ state, transition, exit }) => {
-      state(
-        'a',
-        transition('go', 'b'),
-        exit({ reduce: (ctx, event) => ({ a: ctx.a, c: event.data }) })
-      )
-      state('b')
-    },
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition, exit }) => {
+    initial({ a: 1, b: 2 })
+    state(
+      'a',
+      transition('go', 'b'),
+      exit({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) })
+    )
+    state('b')
+  })
 
-  t.deepEqual(machine.state, { name: 'a', context: { a: 1, b: 2 } })
+  t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
-  machine.send({ type: 'go', data: 3 })
-  t.deepEqual(machine.state, { name: 'b', context: { a: 1, c: 3 }, final: true })
+  machine.send({ type: 'go', value: 3 })
+  t.deepEqual(machine.state, { name: 'b', data: { a: 1, c: 3 }, final: true })
 })
 
 test('exit assign', (t) => {
   const x = true
   const y = { z: 'foo' }
-  const z = (ctx, d) => {
-    for (const key of Object.keys(d)) {
-      d[key] = 'prefix' + d[key]
+  const z = (ctx, data, p) => {
+    for (const key of Object.keys(p)) {
+      p[key] = 'prefix' + p[key]
     }
-    return d
+    return p
   }
 
   const machine = createMachine(({ state, transition, exit }) => {
@@ -326,11 +339,11 @@ test('exit assign', (t) => {
   })
 
   t.is(machine.state.name, 'a')
-  t.deepEqual(machine.state.context, {})
+  t.deepEqual(machine.state.data, {})
 
   machine.send({ type: 'go', x: 1, y: 2 })
   t.is(machine.state.name, 'b')
-  t.deepEqual(machine.state.context, { x: 'prefix1', y: 'prefix2', z: 'foo' })
+  t.deepEqual(machine.state.data, { x: 'prefix1', y: 'prefix2', z: 'foo' })
 })
 
 test('simple machine', (t) => {
@@ -340,55 +353,52 @@ test('simple machine', (t) => {
   })
 
   // machine structure
-  t.deepEqual(machine.machine, {
-    states: {
-      initial: {
-        name: 'initial',
-        enter: [],
-        exit: [],
-        transitions: {
-          go: [
-            {
-              type: 'transition',
-              event: 'go',
-              target: 'final',
-              guards: [],
-              reducers: [],
-            },
-          ],
-        },
-        immediates: [],
+  t.deepEqual(machine.machine.nodes, {
+    initial: {
+      name: 'initial',
+      enter: [],
+      exit: [],
+      transitions: {
+        go: [
+          {
+            type: 'transition',
+            event: 'go',
+            target: 'final',
+            guards: [],
+            reducers: [],
+            effects: [],
+          },
+        ],
       },
-      final: {
-        name: 'final',
-        enter: [],
-        exit: [],
-        transitions: {},
-        immediates: [],
-      },
+      immediates: [],
+    },
+    final: {
+      name: 'final',
+      enter: [],
+      exit: [],
+      transitions: {},
+      immediates: [],
     },
   })
 
   t.deepEqual(machine.runningEffects, [])
-  t.deepEqual(machine.pendingEffects, [])
   t.is(typeof machine.subscribe, 'function')
   t.is(typeof machine.send, 'function')
   t.is(typeof machine.stop, 'function')
 
   t.deepEqual(Object.keys(machine), [
-    'machine',
     'state',
-    'prev',
-    'pendingEffects',
-    'runningEffects',
     'send',
+    'context',
     'subscribe',
+    'machine',
     'stop',
+    'runningEffects',
   ])
 
   t.deepEqual(machine.state, {
     name: 'initial',
-    context: {},
+    data: {},
   })
 
   t.is(machine.state.name, 'initial')
@@ -400,8 +410,8 @@ test('simple machine', (t) => {
 })
 
 test('complex machine', (t) => {
-  const set = (key, val) => (ctx) => ((ctx[key] = val), ctx)
-  const assign = (ctx, { type, ...data }) => ({ ...ctx, ...data })
+  const set = (key, val) => (ctx, data) => ((data[key] = val), data)
+  const assign = (ctx, data, { type, ...payload }) => ({ ...data, ...payload })
 
   const machine = createMachine(({ state, transition, internal, immediate, enter, exit }) => {
     state('initial', transition('goToSecond', 'second', { reduce: assign }))
@@ -421,13 +431,13 @@ test('complex machine', (t) => {
     state('final', enter({ reduce: set('y', 2) }))
   })
 
-  function ping(context, event, send) {
-    t.deepEqual(context, { x: 2 })
+  function ping(context, data, event, send) {
+    t.deepEqual(data, { x: 2 })
     t.deepEqual(event, { type: 'goToFourth', x: 2 })
     send({ type: 'assign', fourthEntered: 'ping' })
     return () => {
       // check that we have stale context
-      t.deepEqual(context, { x: 2 })
+      t.deepEqual(data, { x: 2 })
 
       const stubbed = stub(console, 'warn')
       send('ping')
@@ -445,18 +455,18 @@ test('complex machine', (t) => {
   }
 
   t.is(machine.state.name, 'initial')
-  t.deepEqual(machine.state.context, {})
+  t.deepEqual(machine.state.data, {})
   machine.send({ type: 'goToSecond', x: 1 })
   t.is(machine.state.name, 'third')
-  t.deepEqual(machine.state.context, { x: 1 })
+  t.deepEqual(machine.state.data, { x: 1 })
 
   machine.send({ type: 'goToFourth', x: 2 })
   t.is(machine.state.name, 'fourth')
-  t.deepEqual(machine.state.context, { x: 2, fourthEntered: 'ping' })
+  t.deepEqual(machine.state.data, { x: 2, fourthEntered: 'ping' })
 
   machine.send({ type: 'goToFinal', x: 3 })
   t.is(machine.state.name, 'final')
-  t.deepEqual(machine.state.context, { x: 3, y: 2, fourthEntered: 'ping', fourthExited: 'pong' })
+  t.deepEqual(machine.state.data, { x: 3, y: 2, fourthEntered: 'ping', fourthExited: 'pong' })
   t.is(machine.state.final, true)
 })
 
@@ -525,40 +535,40 @@ test('service subscriptions', (t) => {
   const subs = []
 
   const dispose = machine.subscribe((curr) => {
-    subs.push({ sub: 'sub1', context: curr.context })
+    subs.push({ sub: 'sub1', data: curr.data })
   })
 
   machine.subscribe((curr) => {
-    subs.push({ sub: 'sub2', context: curr.context })
+    subs.push({ sub: 'sub2', data: curr.data })
   })
 
   t.is(active, true)
 
-  t.deepEqual(machine.state, { name: 'one', context: {} })
+  t.deepEqual(machine.state, { name: 'one', data: {} })
 
   machine.send({ type: 'assign', a: 1 })
-  t.deepEqual(machine.state, { name: 'one', context: { a: 1 } })
+  t.deepEqual(machine.state, { name: 'one', data: { a: 1 } })
 
   t.deepEqual(subs, [
-    { sub: 'sub1', context: { a: 1 } },
-    { sub: 'sub2', context: { a: 1 } },
+    { sub: 'sub1', data: { a: 1 } },
+    { sub: 'sub2', data: { a: 1 } },
   ])
 
   dispose()
 
   machine.send({ type: 'assign', a: 2 })
-  t.deepEqual(machine.state, { name: 'one', context: { a: 2 } })
+  t.deepEqual(machine.state, { name: 'one', data: { a: 2 } })
 
   t.deepEqual(subs, [
-    { sub: 'sub1', context: { a: 1 } },
-    { sub: 'sub2', context: { a: 1 } },
-    { sub: 'sub2', context: { a: 2 } },
+    { sub: 'sub1', data: { a: 1 } },
+    { sub: 'sub2', data: { a: 1 } },
+    { sub: 'sub2', data: { a: 2 } },
   ])
 
   machine.stop()
 
   machine.send({ type: 'assign', a: 3 })
-  t.deepEqual(machine.state, { name: 'one', context: { a: 2 } })
+  t.deepEqual(machine.state, { name: 'one', data: { a: 2 } })
 })
 
 function stub(obj, fn) {
