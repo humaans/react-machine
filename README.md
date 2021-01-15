@@ -103,7 +103,7 @@ const { state, send, context, machine } = useMachine(({ state, transition, immed
       internal(event, { guard, reduce, assign, effect }),
       exit({ reduce, assign, effect }),
     )
-}, context, initialData, options)
+}, context, options)
 ```
 
 ### Concepts
@@ -135,13 +135,12 @@ Context - `react-machine` hook has been built with React in mind state machine h
 * [invoke](#invoke)
 * [effect](#effect)
 
-### `useMachine(description, context, initialData, options)`
+### `useMachine(description, context, options)`
 
 Create and initialise the machine.
 
-- `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` as arguments.
+- `description` - the machine description function invoked with `state`, `transition`, `immediate`, `internal`, `enter`, `exit` and `initial` as arguments.
 - `context` - the context to be assigned to the machine's state. Since it's common to pass props and other computed data via context, by default, whenever any of the values of the context change, the hook will send an event of type `assign` with the context object spread onto the event object, this event can be renamed or disabled in options.
-- `initialData` - ??? TODO UPDATE THIS AND THE POINT ABOVE
 - `options` - hook options
 
 Available options:

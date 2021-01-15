@@ -11,7 +11,8 @@ test.serial('usage', async (t) => {
   global.document = dom.window.document
   const root = document.getElementById('root')
 
-  const machine = ({ state, transition, immediate }) => {
+  const machine = ({ initial, state, transition, immediate }) => {
+    initial({ a: 1 })
     state('initial', immediate('counter'))
     state(
       'counter',
@@ -22,7 +23,7 @@ test.serial('usage', async (t) => {
   }
 
   function App() {
-    const { state, send } = useMachine(machine, {}, { a: 1 })
+    const { state, send } = useMachine(machine, {})
     return (
       <>
         <div id='state'>State: {state.name}</div>
@@ -66,7 +67,8 @@ test.serial('changing props automatically send assign event', (t) => {
   global.document = dom.window.document
   const root = document.getElementById('root')
 
-  const machine = ({ state, transition, immediate, internal }) => {
+  const machine = ({ initial, state, transition, immediate, internal }) => {
+    initial({ thang: 'x' })
     state('initial', immediate('counter'))
     state(
       'counter',
@@ -76,7 +78,7 @@ test.serial('changing props automatically send assign event', (t) => {
   }
 
   function App({ thing }) {
-    const { state, context, send } = useMachine(machine, { thing }, { thang: 'x' })
+    const { state, context, send } = useMachine(machine, { thing })
     return (
       <>
         <div id='state'>Name: {state.name}</div>

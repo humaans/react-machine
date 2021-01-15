@@ -9,22 +9,56 @@ test('empty machine', (t) => {
 
   const machine2 = createMachine(() => {})
   t.deepEqual(machine2.state, { name: null, data: {} })
-
-  const machine3 = createMachine(() => {}, {}, { a: 1 })
-  t.deepEqual(machine3.state, { name: null, data: { a: 1 } })
 })
 
 test('initial transition', (t) => {
-  const machine = createMachine(
-    ({ state, enter }) => {
-      state('foo', enter({ assign: { b: 2 } }))
+  const machine1 = createMachine(({ initial, state, enter }) => {
+    initial('bar')
+    state('foo', enter({ assign: { foo: true } }))
+    state('bar', enter({ assign: { bar: true } }))
+  })
+  t.deepEqual(machine1.state, {
+    name: 'bar',
+    data: { bar: true },
+    final: true,
+  })
+
+  const machine2 = createMachine(({ initial, state, enter }) => {
+    initial('bar', { baz: true })
+    state('foo', enter({ assign: { foo: true } }))
+    state('bar', enter({ assign: { bar: true } }))
+  })
+  t.deepEqual(machine2.state, {
+    name: 'bar',
+    data: { bar: true, baz: true },
+    final: true,
+  })
+
+  const machine3 = createMachine(
+    ({ initial, state, enter }) => {
+      initial('bar', (ctx) => ({ baz: ctx.baz }))
+      state('foo', enter({ assign: { foo: true } }))
+      state('bar', enter({ assign: { bar: true } }))
     },
-    {},
-    { a: 1 }
+    { baz: 123 }
   )
-  t.deepEqual(machine.state, {
+  t.deepEqual(machine3.state, {
+    name: 'bar',
+    data: { bar: true, baz: 123 },
+    final: true,
+  })
+
+  const machine4 = createMachine(
+    ({ initial, state, enter }) => {
+      initial((ctx) => ({ baz: ctx.baz }))
+      state('foo', enter({ assign: { foo: true } }))
+      state('bar', enter({ assign: { bar: true } }))
+    },
+    { baz: 123 }
+  )
+  t.deepEqual(machine4.state, {
     name: 'foo',
-    data: { a: 1, b: 2 },
+    data: { foo: true, baz: 123 },
     final: true,
   })
 })
@@ -46,7 +80,8 @@ test('transition guard', (t) => {
 
 test('transition reduce', (t) => {
   const machine = createMachine(
-    ({ state, transition }) => {
+    ({ initial, state, transition }) => {
+      initial({ a: 1, b: 2 })
       state(
         'a',
         transition('go', 'b', {
@@ -55,8 +90,7 @@ test('transition reduce', (t) => {
       )
       state('b')
     },
-    { c: 0 },
-    { a: 1, b: 2 }
+    { c: 0 }
   )
 
   t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
@@ -91,22 +125,19 @@ test('transition assign', (t) => {
 test('transition effect', (t) => {
   let effectCalledWith = null
 
-  const machine = createMachine(
-    ({ state, transition }) => {
-      state(
-        'a',
-        transition('go', 'b', {
-          effect: (ctx, data, event) => {
-            effectCalledWith = event
-            return { unused: 123 }
-          },
-        })
-      )
-      state('b')
-    },
-    {},
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition }) => {
+    initial({ a: 1, b: 2 })
+    state(
+      'a',
+      transition('go', 'b', {
+        effect: (ctx, data, event) => {
+          effectCalledWith = event
+          return { unused: 123 }
+        },
+      })
+    )
+    state('b')
+  })
 
   t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
@@ -128,14 +159,11 @@ test('enter guard is ignored', (t) => {
 })
 
 test('enter reduce', (t) => {
-  const machine = createMachine(
-    ({ state, transition, enter }) => {
-      state('a', transition('go', 'b'))
-      state('b', enter({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) }))
-    },
-    {},
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition, enter }) => {
+    initial({ a: 1, b: 2 })
+    state('a', transition('go', 'b'))
+    state('b', enter({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) }))
+  })
 
   t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
@@ -279,18 +307,15 @@ test('exit guard is ignored', (t) => {
 })
 
 test('exit reduce', (t) => {
-  const machine = createMachine(
-    ({ state, transition, exit }) => {
-      state(
-        'a',
-        transition('go', 'b'),
-        exit({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) })
-      )
-      state('b')
-    },
-    {},
-    { a: 1, b: 2 }
-  )
+  const machine = createMachine(({ initial, state, transition, exit }) => {
+    initial({ a: 1, b: 2 })
+    state(
+      'a',
+      transition('go', 'b'),
+      exit({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) })
+    )
+    state('b')
+  })
 
   t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
 
@@ -328,33 +353,31 @@ test('simple machine', (t) => {
   })
 
   // machine structure
-  t.deepEqual(machine.machine, {
-    nodes: {
-      initial: {
-        name: 'initial',
-        enter: [],
-        exit: [],
-        transitions: {
-          go: [
-            {
-              type: 'transition',
-              event: 'go',
-              target: 'final',
-              guards: [],
-              reducers: [],
-              effects: [],
-            },
-          ],
-        },
-        immediates: [],
+  t.deepEqual(machine.machine.nodes, {
+    initial: {
+      name: 'initial',
+      enter: [],
+      exit: [],
+      transitions: {
+        go: [
+          {
+            type: 'transition',
+            event: 'go',
+            target: 'final',
+            guards: [],
+            reducers: [],
+            effects: [],
+          },
+        ],
       },
-      final: {
-        name: 'final',
-        enter: [],
-        exit: [],
-        transitions: {},
-        immediates: [],
-      },
+      immediates: [],
+    },
+    final: {
+      name: 'final',
+      enter: [],
+      exit: [],
+      transitions: {},
+      immediates: [],
     },
   })
 
