@@ -1,6 +1,6 @@
 {
   "name": "react-machine",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A lightweight state machine for React applications",
   "types": "types",
   "sideEffects": false,
