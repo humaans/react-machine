@@ -3,22 +3,20 @@
 </p>
 
 
-<h4 align="center">Finite state machine hook for React with reactive context, state data, reducers and effects.</h4>
+<h4 align="center">Finite state machine hook for React</h4>
 <br />
 
-When `useState` or `useReducer` is not enough, `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful in handling asynchronouse effects in your components (for example, saving a form). In fact, you can think of `useMachine` as `useReducer` with built in support for asynchronous logic.
+When `useState` or `useReducer` is not enough, `useMachine` hook can be used to express more complex component state and business logic. Machines are especially useful for handling asynchronous effects in your components, for example, saving a form.
 
 Features include:
 
 - a single `useMachine` hook for declaratively describing state machines
 - define `states` and `transitions` between states
+- apply `reducers` and queue `effects` when transitioning
 - `immediate` transitions with `guards`
-- `internal` transitions for updating extended state or triggering effects
-- transition hooks - `reduce`, `assign`, `invoke`, `effect`, `guard`
-- enter/exit hooks - `reduce`, `assign`, `invoke`, `effect`
-- `invoke` for async promise returning functions
-- `effect` for custom async logic and long running activities
-- pure stateless machine implementation integrated into React using `useReducer` and `useEffect`
+- `internal` transitions for updating state data or queuing effects
+- first class support for promises with the `invoke` effects
+- internally implemented using `useReducer` and `useEffect` hooks
 - hierarchical and parallel states _(coming in V2 in 2021)_
 - semantics guided by the [SCXML](https://www.w3.org/TR/scxml/) spec _(coming in V2 in 2021)_
 
@@ -75,20 +73,23 @@ Robot is a great Finite State Machine library with integrations into React, Prea
 - Robot requires every helper function to be imported individually. `react-machine` uses a similar DSL, but passes helpers as arguments to the machine creation function or takes them as options. This means you only ever need to import `useMachine`, which is more akin to how you'd use `useState` or `useReducer` for managing state.
 - Robot has some support for nesting machines, but `react-machine` (_in the upcoming V2_) will support arbitrarily nested and parallel states, adhering more closely to the [SCXML](https://www.w3.org/TR/scxml/) spec.
 - Robot does not support internal transitions, making it difficult to update machine context in the middle of an async function invocation.
+- Robot does not clean up promise invocations in between transitions.
 - Robot does not have `enter` and `exit` hooks, and does not allow custom effect implementations.
+- Since `react-machine` is built with React in mind, it has a special ability to react to context (or prop) changes to drive machine transitions.
 
 ### Comparison to [XState](https://xstate.js.org/):
 
 XState is the most powerful modern state chart / state machine implementation for JavaScript. It's rich in features and supports React and Vue out of the box. Here are some differences:
 
-- `react-machine` strives to create a smaller surface area, less features, less options, less packages. This could be seen as a good or a bad thing depending on your perspective and your requirements. The goal is to seek _simplicity_, which can be subjective. For example, you will not find actors, machine inter messaging, delayed events or history states in `react-machine`.
+- `react-machine` strives to create a smaller surface area, less features, less options, less packages. This could be seen as a good or a bad thing depending on your perspective and your requirements. For example, you will not find actors, machine inter messaging, delayed events or history states in `react-machine`.
 - related to the point above, full compatibility / serialisation to SCXML is a non goal for `react-machine`, SCXML (and it's interpration algorithm in particular) is only used to guide the implementation of `react-machine`.
 - `react-machine` uses a more functional machine declaration DSL that is closer to that found in Robot, whereas XState declares machines using a deeply nested object notation, this might well be a personal preference, give both a try, and also XState might gain new optional DSL adapters in the future.
 - XState provides visualisation of it's state charts, a feature that could be added to `react-machine` in the future.
+- Since `react-machine` is built with React in mind, it has a special ability to react to context (or prop) changes to drive machine transitions.
 
 ### Conclusion
 
-In summary, `react-machine` is an experiment in creating a lightweight, simple, flexible solution for component level state management in React. The core machine logic is pure and stateless, which allows for delegating the state storage to `useReducer` and effect execution to `useEffect`, done soe with concurrent mode compatibility in mind.
+In summary, `react-machine` is an experiment in creating a lightweight and flexible solution for component level state management in React. The core machine logic is pure and stateless, which allows for delegating the state storage to `useReducer` and effect execution to `useEffect`, done so with concurrent mode compatibility in mind.
 
 ## API
 
@@ -108,11 +109,13 @@ const { state, send, context, machine } = useMachine(({ state, transition, immed
 
 ### Concepts
 
-When you invoke the `useMachine` hook .. returns machine state, send event, context, machine itself. Typically you'll use state, send and you can use context in case you're passing it down to other components, it can be useful.
+When you invoke the `useMachine` hook it returns machine state, send, context and the constructed machine itself. Typically you'll use state, send and you could use context in case you're passing it down to other components.
 
-Since machines deal with managing what node the machine is in (name) and can also manipulate arbirary set of data as part of transitions and effects (data), the state consists of { name, data }.
+**State** - state consists of `name` and `data` (state data). Name is the name of the current state node the machine is in. State data is any data that has been computed using reducers (and assigners) as part of transitioning between states.
 
-Context - `react-machine` hook has been built with React in mind state machine hook explain how it's reactive via the 'assign' event. Think of machine context a little bit like props of a component. It's just some immutable data that can be used in your guards, reducers and effects. This is separate from state since changing context e.g. passing an updated prop to your component, which then gets passed as updated context value to your machine by default will not trigger any rerender. But it will emit an internal transition with the type of `assign` (which you can customize via machine options). This means that as new context passes through your machine, you can capture this event in an internal, immediate or external transition to react to some changed prop to move the machine to a different state.
+**Send** - this is the main way you will transition machine from one state to another. Send can take the event name, or an event object with key `type` and arbitrary other keys as payload.
+
+**Context** - context is passed as the second argument to `useMachine` and is not to be confused with machine state or machine state data. Context is a little bit like React component props. It's some immutable data that gets passed into every machine hook (such as guard, reduce or effect). Context provides the best way for your machine to utilise component props in machine's business logic. If context changes (or more specifically, any of value of the context object changes), an event of type `assign` and no payload will be sent into the machine, which will evaluate any guarded immediated transitions and any transitions listening to `assign` event. This is very useful if you want your machine to change states or update it's state data based on changing context. It is also efficient, since context changes that are not relevant to the current machine state will not trigger any re-renders.
 
 #### Hook
 
@@ -126,6 +129,7 @@ Context - `react-machine` hook has been built with React in mind state machine h
 * [internal](#internalevent-options)
 * [enter](#enteroptions)
 * [exit](#exitoptions)
+* [initial](#initialoptions)
 
 #### Transition hooks
 
@@ -145,23 +149,24 @@ Create and initialise the machine.
 
 Available options:
 
-- `assign` (default: `"assign"`) - the name of the event to be sent when context values change. Set this to `false` to disable sending the event altogether.
+- `assign` (default: `"assign"`) - the name of the event to be sent when context changes. Set this to `false` to disable sending the event altogether.
 - `areEqual` (default: compare object values) - by default all context values are checked for changes on each render. Use this option to customize how equality is computed when comparing the previous context with the new context.
 
-Returns `[state, send, machine]`:
+Returns `{ state, send, context, machine }`:
 
 - `state` - current state of shape `{ name, data, final }`
 - `send` - send an event, e.g. `send('save')` or `send({ type: 'save', item: 'x' })`
 - `context` - the same value that was passed in as the context argument to the hook
-- `machine` - a stateless machine description that could be used to transition to new states
+- `machine` - a stateless machine description that is used internally to compute transitions
 
 ```js
-const myMachine = useCallback(({ state, transition }) => {
+const myMachine = useCallback(({ state, transition, initial }) => {
+  initial({ x: 0 })
   state('a', transition('next', 'b'))
   state('b', transition('next', 'c'))
   state('c')
 }, [])
-const  {state, send, context, machine } = useMachine(myMachine, { close: props.close }, { x: 0 })
+const  {state, send, context, machine } = useMachine(myMachine, { close: props.close })
 const { name, data, final } = state
 ```
 
@@ -188,7 +193,7 @@ Declare a transition between states.
 
 ```js
 transition('save', 'saving')
-transition('reset', 'edit', { reduce: ctx => ({ ...ctx, data: null }) })
+transition('reset', 'edit', { reduce: (ctx, data) => ({ ...data, value: null }) })
 transition('close', 'closing', { effect: ctx => ctx.onClose() })
 ```
 
@@ -239,6 +244,20 @@ exit({ effect: ctx => ctx.stop() })
 exit({ assign: { error: null } })
 ```
 
+### `initial(...)`
+
+A hook for setting initial state and/or initial state data. If initial state name is omitted, the first state node will be used as the initial state. The initial data can be a static object (or any kind of data structure) or a function that takes context and returns the initial data.
+
+```js
+initial('loading')
+initial('loading', { item: null })
+initial('loading', (ctx) => ({ item: ctx.item }))
+initial('loading', (ctx) => { item: ctx.item })
+initial({ item: null })
+initial((ctx) => ({ item: ctx.item }))
+initial((ctx) => { item: ctx.item })
+```
+
 ### `guard`
 
 If the guard condition fails, the transition is skipped when matching against the event and selection proceeds to the next transition. Commonly used with `immediate` transitions, but works with any type of transition.
@@ -270,19 +289,19 @@ Return a partial context update object, that will be immutably assigned to the c
 
 ### `invoke`
 
-A way to invoke async functions as part of entering a state. If the promise is fulfilled, an event of shape `{ type: 'done', data }` is sent, and if the promise rejects, an event of `{ type: 'error', error }` is sent. Note, if the machine exits the state while the promise is pending, the results will be ignored and no event will get sent. Note, internally, `invoke` is turned into an `effect`.
+A way to invoke async functions as part of entering a state. If the promise is fulfilled, an event of shape `{ type: 'done', result }` is sent, and if the promise rejects, an event of `{ type: 'error', error }` is sent. Note, if the machine exits the state while the promise is pending, the results will be ignored and no event will get sent. Note, internally, `invoke` is turned into an `effect`.
 
 ```js
 state('save',
   enter({ invoke: async (context, data, event) => context.save() }),
-  transition('done', 'show', { assign: (ctx, data, event) => ({ item: event.data }) }),
+  transition('done', 'show', { assign: (ctx, data, event) => ({ item: event.result }) }),
   transition('error', 'edit', { assign: (ctx, data, event) => ({ error: event.error }) }),
 )
 ```
 
 ### `effect`
 
-A way of handling side effects, async effects, subscriptions or activities. Once the state is entered, the effect gets started (in `useEffect` and only after finalising all of the immediate transitions) and can send any number of events. Note that `context` will be valid when initially running the effect, but will get stale afterwards, and is best read in subsequent internal transitions. Also note that `send` will be ignored after the effect is cleaned up, and similarly `send` can not be used in the cleanup function of the effect.
+A way of handling side effects, async effects, subscriptions or activities. Once the state is entered, the effect gets started (in `useEffect` and only after finalising all of the immediate transitions) and can send any number of events. Note that `context` will be valid when initially running the effect, but will get stale afterwards. Also note that `send` will be ignored after the effect is cleaned up, and similarly `send` can not be used in the cleanup function of the effect.
 
 ```js
 const addPing = (ctx, data, event) => ({ pings: data.pings.concat(event.ping) })
