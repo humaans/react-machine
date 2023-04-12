@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+- Fix the release, publish the right directory.
+
 ## 0.4.0
 
-- Upgrade all dependencies
+- Upgrade all dependencies.
 
 ## 0.3.0
 
