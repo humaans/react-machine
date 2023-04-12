@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Fix the release, publish the right directory.
+
 ## 0.4.1
 
 - Fix the release, publish the right directory.
