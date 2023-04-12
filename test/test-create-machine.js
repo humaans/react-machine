@@ -1,7 +1,7 @@
 /* eslint-disable no-sequences */
 
 import test from 'ava'
-import { createService as createMachine } from '../lib/service.js'
+import { createService as createMachine } from '../lib/service'
 
 test('empty machine', (t) => {
   const machine1 = createMachine()

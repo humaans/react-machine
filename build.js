@@ -1,8 +1,5 @@
 const fs = require('fs')
 const path = require('path')
-const execa = require('execa')
-
-const sh = (...args) => execa(...args, { stdio: 'inherit', shell: true })
 
 const paths = [
   'lib/core.js',
@@ -17,6 +14,9 @@ const paths = [
 ]
 
 ;(async function () {
+  const { execa } = await import('execa')
+  const sh = (...args) => execa(...args, { stdio: 'inherit', shell: true })
+
   await sh('rm -rf dist && mkdir -p dist')
 
   for (const p of paths) {

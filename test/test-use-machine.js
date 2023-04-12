@@ -1,15 +1,45 @@
 import test from 'ava'
 import React from 'react'
-import { render } from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import { JSDOM } from 'jsdom'
-import { useMachine } from '../lib/index.js'
+import { useMachine } from '../lib/index'
 
-test.serial('usage', async (t) => {
+global.IS_REACT_ACT_ENVIRONMENT = true
+
+function dom() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>')
   global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const domNode = dom.window.document.getElementById('root')
+  const root = createRoot(domNode)
+
+  function render(el) {
+    act(() => {
+      root.render(el)
+    })
+  }
+
+  function click(el) {
+    act(() => {
+      el.dispatchEvent(
+        new dom.window.MouseEvent('click', {
+          view: dom.window,
+          bubbles: true,
+          cancelable: true,
+        })
+      )
+    })
+  }
+
+  function $(sel) {
+    return dom.window.document.querySelector(sel)
+  }
+
+  return { root, render, click, $ }
+}
+
+test.serial('usage', async (t) => {
+  const { render, click, $ } = dom()
 
   const machine = ({ initial, state, transition, immediate }) => {
     initial({ a: 1 })
@@ -33,39 +63,26 @@ test.serial('usage', async (t) => {
     )
   }
 
-  act(() => {
-    render(<App />, root)
-  })
+  render(<App />)
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Count: 1')
+  t.is($('#state').innerHTML, 'State: counter')
+  t.is($('#count').innerHTML, 'Count: 1')
 
-  click(dom, document.querySelector('#increment'))
-  click(dom, document.querySelector('#increment'))
+  click($('#increment'))
+  click($('#increment'))
 
-  act(() => {
-    render(<App />, root)
-  })
+  t.is($('#state').innerHTML, 'State: counter')
+  t.is($('#count').innerHTML, 'Count: 3')
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
-  t.is(document.querySelector('#count').innerHTML, 'Count: 3')
+  click($('#increment'))
+  click($('#increment'))
 
-  click(dom, document.querySelector('#increment'))
-  click(dom, document.querySelector('#increment'))
-
-  act(() => {
-    render(<App />, root)
-  })
-
-  t.is(document.querySelector('#state').innerHTML, 'State: final')
-  t.is(document.querySelector('#count').innerHTML, 'Count: 4')
+  t.is($('#state').innerHTML, 'State: final')
+  t.is($('#count').innerHTML, 'Count: 4')
 })
 
 test.serial('changing props automatically send assign event', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   const machine = ({ initial, state, transition, immediate, internal }) => {
     initial({ thang: 'x' })
@@ -90,37 +107,30 @@ test.serial('changing props automatically send assign event', (t) => {
     )
   }
 
-  act(() => {
-    render(<App thing='a' />, root)
-  })
+  render(<App thing='a' />)
 
-  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: a')
-  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: a')
-  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: x')
+  t.is($('#state').innerHTML, 'Name: counter')
+  t.is($('#props-thing').innerHTML, 'Props thing: a')
+  t.is($('#context-thing').innerHTML, 'Context thing: a')
+  t.is($('#derived-thang').innerHTML, 'Derived thang: x')
 
-  act(() => {
-    render(<App thing='b' />, root)
-  })
+  render(<App thing='b' />)
 
-  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: b')
-  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: b')
-  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: bb')
+  t.is($('#state').innerHTML, 'Name: counter')
+  t.is($('#props-thing').innerHTML, 'Props thing: b')
+  t.is($('#context-thing').innerHTML, 'Context thing: b')
+  t.is($('#derived-thang').innerHTML, 'Derived thang: bb')
 
-  click(dom, document.querySelector('#changeThing'))
+  click($('#changeThing'))
 
-  t.is(document.querySelector('#state').innerHTML, 'Name: counter')
-  t.is(document.querySelector('#props-thing').innerHTML, 'Props thing: b')
-  t.is(document.querySelector('#context-thing').innerHTML, 'Context thing: b')
-  t.is(document.querySelector('#derived-thang').innerHTML, 'Derived thang: c')
+  t.is($('#state').innerHTML, 'Name: counter')
+  t.is($('#props-thing').innerHTML, 'Props thing: b')
+  t.is($('#context-thing').innerHTML, 'Context thing: b')
+  t.is($('#derived-thang').innerHTML, 'Derived thang: c')
 })
 
 test.serial('effects', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, $ } = dom()
 
   const eff = []
 
@@ -152,33 +162,24 @@ test.serial('effects', (t) => {
     return <div />
   }
 
-  act(() => {
-    render(<App thing='a' />, root)
-  })
+  render(<App thing='a' />)
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is($('#state').innerHTML, 'State: counter')
   t.deepEqual(eff, ['started'])
 
-  act(() => {
-    render(<App thing='a' />, root)
-  })
+  render(<App thing='a' />)
 
-  t.is(document.querySelector('#state').innerHTML, 'State: counter')
+  t.is($('#state').innerHTML, 'State: counter')
   t.deepEqual(eff, ['started'])
 
-  act(() => {
-    render(null, root)
-  })
+  render(null)
 
-  t.is(document.querySelector('#root').innerHTML, '')
+  t.is($('#root').innerHTML, '')
   t.deepEqual(eff, ['started', 'finished'])
 })
 
 test.serial('internal transition effects', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   const eff = []
 
@@ -214,25 +215,19 @@ test.serial('internal transition effects', (t) => {
     )
   }
 
-  act(() => {
-    render(<App />, root)
-  })
+  render(<App />)
 
   t.deepEqual(eff, ['enter effect started'])
 
-  click(dom, document.querySelector('#increment'))
+  click($('#increment'))
 
-  act(() => {
-    render(<App />, root)
-  })
+  render(<App />)
 
   t.deepEqual(eff, ['enter effect started', 'internal effect started'])
 
-  click(dom, document.querySelector('#increment'))
+  click($('#increment'))
 
-  act(() => {
-    render(<App />, root)
-  })
+  render(<App />)
 
   t.deepEqual(eff, [
     'enter effect started',
@@ -243,10 +238,7 @@ test.serial('internal transition effects', (t) => {
 })
 
 test.serial('all types of effects with cleanup', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   let eff = []
 
@@ -295,9 +287,7 @@ test.serial('all types of effects with cleanup', (t) => {
   }
 
   const rerender = () => {
-    act(() => {
-      render(<App />, root)
-    })
+    render(<App />)
   }
 
   eff = []
@@ -305,22 +295,22 @@ test.serial('all types of effects with cleanup', (t) => {
   t.deepEqual(eff, ['a.enter started'])
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, ['a.enter stopped', 'a.exit started', 'a.transition started', 'b.enter started'])
 
   eff = []
-  click(dom, document.querySelector('#retry'))
+  click($('#retry'))
   rerender()
   t.deepEqual(eff, ['b.internal started'])
 
   eff = []
-  click(dom, document.querySelector('#retry'))
+  click($('#retry'))
   rerender()
   t.deepEqual(eff, ['b.internal stopped', 'b.internal started'])
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, [
     'b.internal stopped',
@@ -337,14 +327,11 @@ test.serial('all types of effects with cleanup', (t) => {
     'c.immediate started',
   ])
 
-  t.is(document.querySelector('#state').innerHTML, 'State: d')
+  t.is($('#state').innerHTML, 'State: d')
 })
 
 test.serial('all types of effects without cleanup', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   let eff = []
 
@@ -390,9 +377,7 @@ test.serial('all types of effects without cleanup', (t) => {
   }
 
   const rerender = () => {
-    act(() => {
-      render(<App />, root)
-    })
+    render(<App />)
   }
 
   eff = []
@@ -400,22 +385,22 @@ test.serial('all types of effects without cleanup', (t) => {
   t.deepEqual(eff, ['a.enter started'])
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, ['a.exit started', 'a.transition started', 'b.enter started'])
 
   eff = []
-  click(dom, document.querySelector('#retry'))
+  click($('#retry'))
   rerender()
   t.deepEqual(eff, ['b.internal started'])
 
   eff = []
-  click(dom, document.querySelector('#retry'))
+  click($('#retry'))
   rerender()
   t.deepEqual(eff, ['b.internal started'])
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, [
     'b.exit started',
@@ -425,14 +410,11 @@ test.serial('all types of effects without cleanup', (t) => {
     'c.immediate started',
   ])
 
-  t.is(document.querySelector('#state').innerHTML, 'State: d')
+  t.is($('#state').innerHTML, 'State: d')
 })
 
 test.serial('effect sending an event', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   let eff = []
   let state
@@ -475,9 +457,7 @@ test.serial('effect sending an event', (t) => {
   }
 
   const rerender = () => {
-    act(() => {
-      render(<App />, root)
-    })
+    render(<App />)
   }
 
   eff = []
@@ -486,17 +466,14 @@ test.serial('effect sending an event', (t) => {
   t.deepEqual(state, { name: 'a', data: { a: 1, b: 2 } })
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, ['enter2 stopped', 'enter1 stopped'])
   t.deepEqual(state, { name: 'b', data: { a: 1, b: 2 }, final: true })
 })
 
 test.serial('sending consecutive events', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   let eff = []
   let state
@@ -553,9 +530,7 @@ test.serial('sending consecutive events', (t) => {
   }
 
   const rerender = () => {
-    act(() => {
-      render(<App />, root)
-    })
+    render(<App />)
   }
 
   eff = []
@@ -564,7 +539,7 @@ test.serial('sending consecutive events', (t) => {
   t.deepEqual(state, { name: 'a', data: { a: 1, e: 11 } })
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
 
   t.deepEqual(eff, [
@@ -578,10 +553,7 @@ test.serial('sending consecutive events', (t) => {
 })
 
 test.serial('external self transition', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, click, $ } = dom()
 
   let eff = []
   let state
@@ -618,9 +590,7 @@ test.serial('external self transition', (t) => {
   }
 
   const rerender = () => {
-    act(() => {
-      render(<App />, root)
-    })
+    render(<App />)
   }
 
   eff = []
@@ -629,22 +599,19 @@ test.serial('external self transition', (t) => {
   t.deepEqual(state, { name: 'a', data: { a: 1 } })
 
   eff = []
-  click(dom, document.querySelector('#assign'))
+  click($('#assign'))
   rerender()
   t.deepEqual(eff, ['a.enter stopped', 'a.transition started', 'a.enter started'])
 
   eff = []
-  click(dom, document.querySelector('#next'))
+  click($('#next'))
   rerender()
   t.deepEqual(eff, ['a.enter stopped', 'a.transition stopped'])
   t.deepEqual(state, { name: 'b', data: { a: 1 }, final: true })
 })
 
 test.serial('context changes are handled efficiently', (t) => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>')
-  global.window = dom.window
-  global.document = dom.window.document
-  const root = document.getElementById('root')
+  const { render, $ } = dom()
 
   const fooIsLarge = (ctx, data) => ctx.foo >= 3
   const barIsLarge = (ctx, data) => ctx.bar >= 3
@@ -695,9 +662,7 @@ test.serial('context changes are handled efficiently', (t) => {
   }
 
   const rerender = ({ foo, bar }) => {
-    act(() => {
-      render(<App foo={foo} bar={bar} />, root)
-    })
+    render(<App foo={foo} bar={bar} />)
   }
 
   rerender({ foo: 1, bar: 2 })
@@ -708,9 +673,9 @@ test.serial('context changes are handled efficiently', (t) => {
     child: 1,
   })
 
-  t.is(document.querySelector('#foo').innerHTML, '1')
-  t.is(document.querySelector('#bar').innerHTML, '2')
-  t.is(document.querySelector('#derivedBar').innerHTML, '')
+  t.is($('#foo').innerHTML, '1')
+  t.is($('#bar').innerHTML, '2')
+  t.is($('#derivedBar').innerHTML, '')
 
   rerender({ foo: 2, bar: 2 })
   t.deepEqual(state, { name: 'a', data: {} })
@@ -720,9 +685,9 @@ test.serial('context changes are handled efficiently', (t) => {
     child: 2,
   })
 
-  t.is(document.querySelector('#foo').innerHTML, '2')
-  t.is(document.querySelector('#bar').innerHTML, '2')
-  t.is(document.querySelector('#derivedBar').innerHTML, '')
+  t.is($('#foo').innerHTML, '2')
+  t.is($('#bar').innerHTML, '2')
+  t.is($('#derivedBar').innerHTML, '')
 
   rerender({ foo: 2, bar: 3 })
   t.deepEqual(state, { name: 'a', data: { derivedBar: 6 } })
@@ -732,9 +697,9 @@ test.serial('context changes are handled efficiently', (t) => {
     child: 3,
   })
 
-  t.is(document.querySelector('#foo').innerHTML, '2')
-  t.is(document.querySelector('#bar').innerHTML, '3')
-  t.is(document.querySelector('#derivedBar').innerHTML, '6')
+  t.is($('#foo').innerHTML, '2')
+  t.is($('#bar').innerHTML, '3')
+  t.is($('#derivedBar').innerHTML, '6')
 
   rerender({ foo: 3, bar: 3 })
   t.deepEqual(state, { name: 'b', data: { derivedBar: 6 }, final: true })
@@ -744,9 +709,9 @@ test.serial('context changes are handled efficiently', (t) => {
     child: 4,
   })
 
-  t.is(document.querySelector('#foo').innerHTML, '3')
-  t.is(document.querySelector('#bar').innerHTML, '3')
-  t.is(document.querySelector('#derivedBar').innerHTML, '6')
+  t.is($('#foo').innerHTML, '3')
+  t.is($('#bar').innerHTML, '3')
+  t.is($('#derivedBar').innerHTML, '6')
 
   // rerender with the same props, everything re-renders only once
   rerender({ foo: 3, bar: 3 })
@@ -763,13 +728,3 @@ test.serial('context changes are handled efficiently', (t) => {
 //  count renders of parent, machine component, child
 //    when context changes
 //    when context changes + guard is triggered
-
-function click(dom, el) {
-  return el.dispatchEvent(
-    new dom.window.MouseEvent('click', {
-      view: dom.window,
-      bubbles: true,
-      cancelable: true,
-    })
-  )
-}

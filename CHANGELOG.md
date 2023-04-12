@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+- Upgrade all dependencies
+
 ## 0.3.0
 
 API refinements on the way to 1.0
