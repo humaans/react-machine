@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+
+- Upgrade all dependencies to address security alerts.
+
 ## 0.4.2
 
 - Fix the release, publish the right directory.
