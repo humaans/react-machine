@@ -26,7 +26,7 @@ function dom() {
           view: dom.window,
           bubbles: true,
           cancelable: true,
-        })
+        }),
       )
     })
   }
@@ -47,7 +47,7 @@ test.serial('usage', async (t) => {
     state(
       'counter',
       transition('increment', 'counter', { reduce: (ctx, data) => ({ ...data, a: data.a + 1 }) }),
-      immediate('final', { guard: (ctx, data) => data.a >= 4 })
+      immediate('final', { guard: (ctx, data) => data.a >= 4 }),
     )
     state('final')
   }
@@ -90,7 +90,7 @@ test.serial('changing props automatically send assign event', (t) => {
     state(
       'counter',
       internal('assign', { assign: (ctx, data) => ({ ...data, thang: ctx.thing + ctx.thing }) }),
-      internal('changeThang', { assign: true })
+      internal('changeThang', { assign: true }),
     )
   }
 
@@ -144,7 +144,7 @@ test.serial('effects', (t) => {
             eff.push('finished')
           }
         },
-      })
+      }),
     )
   }
 
@@ -201,7 +201,7 @@ test.serial('internal transition effects', (t) => {
     state(
       'counter',
       enter({ effect: enterEffect }),
-      internal('increment', { effect: internalEffect })
+      internal('increment', { effect: internalEffect }),
     )
   }
 
@@ -254,7 +254,7 @@ test.serial('all types of effects with cleanup', (t) => {
       'a',
       enter({ effect: effect('a.enter') }),
       transition('next', 'b', { effect: effect('a.transition') }),
-      exit({ effect: effect('a.exit') })
+      exit({ effect: effect('a.exit') }),
     )
 
     state(
@@ -262,14 +262,14 @@ test.serial('all types of effects with cleanup', (t) => {
       enter({ effect: effect('b.enter') }),
       internal('retry', { effect: effect('b.internal') }),
       transition('next', 'c', { effect: effect('b.transition') }),
-      exit({ effect: effect('b.exit') })
+      exit({ effect: effect('b.exit') }),
     )
 
     state(
       'c',
       enter({ effect: effect('c.enter') }),
       immediate('d', { effect: effect('c.immediate') }),
-      exit({ effect: effect('c.exit') })
+      exit({ effect: effect('c.exit') }),
     )
 
     state('d')
@@ -344,7 +344,7 @@ test.serial('all types of effects without cleanup', (t) => {
       'a',
       enter({ effect: effect('a.enter') }),
       transition('next', 'b', { effect: effect('a.transition') }),
-      exit({ effect: effect('a.exit') })
+      exit({ effect: effect('a.exit') }),
     )
 
     state(
@@ -352,14 +352,14 @@ test.serial('all types of effects without cleanup', (t) => {
       enter({ effect: effect('b.enter') }),
       internal('retry', { effect: effect('b.internal') }),
       transition('next', 'c', { effect: effect('b.transition') }),
-      exit({ effect: effect('b.exit') })
+      exit({ effect: effect('b.exit') }),
     )
 
     state(
       'c',
       enter({ effect: effect('c.enter') }),
       immediate('d', { effect: effect('c.immediate') }),
-      exit({ effect: effect('c.exit') })
+      exit({ effect: effect('c.exit') }),
     )
 
     state('d')
@@ -439,7 +439,7 @@ test.serial('effect sending an event', (t) => {
       enter({ effect: effect('enter1'), assign: { a: 1 } }),
       enter({ effect: effect('enter2') }),
       internal('assign', { assign: true }),
-      transition('next', 'b')
+      transition('next', 'b'),
     )
 
     state('b')
@@ -500,13 +500,13 @@ test.serial('sending consecutive events', (t) => {
       transition('next', 'b', {
         effect: effect('a.transition', 22, { a: 1, e: 11, b: 2 }),
         assign: { b: 2 },
-      })
+      }),
     )
 
     state(
       'b',
       enter({ effect: effect('b.enter', 33, { a: 1, e: 11, b: 2, c: 3 }), assign: { c: 3 } }),
-      transition('next', 'c')
+      transition('next', 'c'),
     )
 
     state('c')
@@ -570,7 +570,7 @@ test.serial('external self transition', (t) => {
       'a',
       enter({ effect: effect('a.enter', 11), assign: { a: 1 } }),
       transition('assign', 'a', { assign: true, effect: effect('a.transition') }),
-      transition('next', 'b')
+      transition('next', 'b'),
     )
 
     state('b')
@@ -622,7 +622,7 @@ test.serial('context changes are handled efficiently', (t) => {
       'a',
       transition('next', 'b'),
       internal('assign', { guard: barIsLarge, reduce: multiplyBar }),
-      immediate('b', { guard: fooIsLarge })
+      immediate('b', { guard: fooIsLarge }),
     )
     state('b')
   }

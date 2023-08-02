@@ -40,7 +40,7 @@ test('initial transition', (t) => {
       state('foo', enter({ assign: { foo: true } }))
       state('bar', enter({ assign: { bar: true } }))
     },
-    { baz: 123 }
+    { baz: 123 },
   )
   t.deepEqual(machine3.state, {
     name: 'bar',
@@ -54,7 +54,7 @@ test('initial transition', (t) => {
       state('foo', enter({ assign: { foo: true } }))
       state('bar', enter({ assign: { bar: true } }))
     },
-    { baz: 123 }
+    { baz: 123 },
   )
   t.deepEqual(machine4.state, {
     name: 'foo',
@@ -86,11 +86,11 @@ test('transition reduce', (t) => {
         'a',
         transition('go', 'b', {
           reduce: (ctx, data, event) => ({ a: data.a + 5, c: ctx.c, d: event.value }),
-        })
+        }),
       )
       state('b')
     },
-    { c: 0 }
+    { c: 0 },
   )
 
   t.deepEqual(machine.state, { name: 'a', data: { a: 1, b: 2 } })
@@ -134,7 +134,7 @@ test('transition effect', (t) => {
           effectCalledWith = event
           return { unused: 123 }
         },
-      })
+      }),
     )
     state('b')
   })
@@ -201,7 +201,7 @@ test('enter invoke', async (t) => {
       'b',
       enter({ invoke: save }),
       transition('done', 'c', { assign: [true, { error: null }] }),
-      transition('error', 'a', { assign: true })
+      transition('error', 'a', { assign: true }),
     )
     state('c')
   })
@@ -252,7 +252,7 @@ test('enter effect', async (t) => {
       'b',
       enter({ effect: save }),
       transition('done', 'c', { assign: [true, { error: null }] }),
-      transition('error', 'a', { assign: true })
+      transition('error', 'a', { assign: true }),
     )
     state('c')
   })
@@ -312,7 +312,7 @@ test('exit reduce', (t) => {
     state(
       'a',
       transition('go', 'b'),
-      exit({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) })
+      exit({ reduce: (ctx, data, event) => ({ a: data.a, c: event.value }) }),
     )
     state('b')
   })
@@ -419,14 +419,14 @@ test('complex machine', (t) => {
     state(
       'third',
       immediate('final', { guard: () => false }),
-      transition('goToFourth', 'fourth', { reduce: assign })
+      transition('goToFourth', 'fourth', { reduce: assign }),
     )
     state(
       'fourth',
       enter({ effect: ping }),
       internal('assign', { reduce: assign }),
       transition('goToFinal', 'final', { reduce: assign }),
-      exit({ assign: { fourthExited: 'pong' } })
+      exit({ assign: { fourthExited: 'pong' } }),
     )
     state('final', enter({ reduce: set('y', 2) }))
   })
@@ -474,11 +474,11 @@ test('throw an error if state is passed an incorrect argument', (t) => {
   const err = t.throws(() =>
     createMachine(({ state, enter }) => {
       state('foo', { assign: { b: 2 } })
-    })
+    }),
   )
   t.is(
     err.message,
-    "State 'foo' should be passed one of enter(), exit(), transition(), immediate() or internal()"
+    "State 'foo' should be passed one of enter(), exit(), transition(), immediate() or internal()",
   )
 })
 
@@ -486,14 +486,14 @@ test('throw an error if transition specifies an invalid target', (t) => {
   const err1 = t.throws(() =>
     createMachine(({ state, transition }) => {
       state('foo', transition('next', 'bar'))
-    })
+    }),
   )
   t.is(err1.message, "Invalid transition target 'bar'")
 
   const err2 = t.throws(() =>
     createMachine(({ state, immediate }) => {
       state('foo', immediate('bar'))
-    })
+    }),
   )
   t.is(err2.message, "Invalid transition target 'bar'")
 })
@@ -502,14 +502,14 @@ test('throw an error if transition arguments are incorrect', (t) => {
   const err1 = t.throws(() =>
     createMachine(({ state, transition }) => {
       state('foo', transition(1))
-    })
+    }),
   )
   t.is(err1.message, 'First argument of the transition must be the name of the event')
 
   const err2 = t.throws(() =>
     createMachine(({ state, transition }) => {
       state('foo', transition('1', 2))
-    })
+    }),
   )
   t.is(err2.message, 'Second argument of the transition must be the name of the target state')
 })
@@ -528,7 +528,7 @@ test('service subscriptions', (t) => {
           }
         },
       }),
-      internal('assign', { assign: true })
+      internal('assign', { assign: true }),
     )
   })
 

@@ -41,7 +41,7 @@ const paths = [
         ...pkg,
       },
       null,
-      2
-    )
+      2,
+    ),
   )
 })()
