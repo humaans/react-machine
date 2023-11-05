@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5
+
+- Upgrade all dependencies to address security alerts.
+
 ## 0.4.4
 
 - Release failed, doing it again.

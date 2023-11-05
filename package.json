@@ -38,22 +38,22 @@
     "react": "^17.0.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.22.9",
-    "@babel/core": "^7.22.9",
-    "@babel/plugin-transform-modules-commonjs": "^7.22.5",
-    "@babel/plugin-transform-react-jsx": "^7.22.5",
-    "@babel/register": "^7.22.5",
+    "@babel/cli": "^7.23.0",
+    "@babel/core": "^7.23.2",
+    "@babel/plugin-transform-modules-commonjs": "^7.23.0",
+    "@babel/plugin-transform-react-jsx": "^7.22.15",
+    "@babel/register": "^7.22.15",
     "@skypack/package-check": "^0.2.2",
     "ava": "^5.3.1",
     "c8": "^8.0.1",
     "esm": "^3.2.25",
-    "execa": "^7.2.0",
-    "healthier": "^6.3.0",
+    "execa": "^8.0.1",
+    "healthier": "^7.0.0",
     "jsdom": "^22.1.0",
-    "prettier": "^3.0.0",
+    "prettier": "^3.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   },
   "ava": {
     "files": [
