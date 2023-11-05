@@ -25,6 +25,9 @@
     "type": "git",
     "url": "git+https://github.com/humaans/react-machine.git"
   },
+  "engines": {
+    "node": "*"
+  },
   "keywords": [
     "react",
     "state",
