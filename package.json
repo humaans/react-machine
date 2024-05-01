@@ -1,10 +1,12 @@
 {
   "name": "react-machine",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "A lightweight state machine for React applications",
   "types": "types",
   "sideEffects": false,
-  "files": ["*"],
+  "files": [
+    "*"
+  ],
   "scripts": {
     "test": "healthier && prettier --check '**/*.{js,css,yml}' && ava && npm run package-check",
     "format": "prettier --write '**/*.{js,css,yml}'",
@@ -57,8 +59,12 @@
     "typescript": "^5.4.5"
   },
   "ava": {
-    "files": ["test/test-*.js"],
-    "require": ["@babel/register"]
+    "files": [
+      "test/test-*.js"
+    ],
+    "require": [
+      "@babel/register"
+    ]
   },
   "np": {
     "contents": "dist",
