@@ -4,9 +4,7 @@
   "description": "A lightweight state machine for React applications",
   "types": "types",
   "sideEffects": false,
-  "files": [
-    "*"
-  ],
+  "files": ["*"],
   "scripts": {
     "test": "healthier && prettier --check '**/*.{js,css,yml}' && ava && npm run package-check",
     "format": "prettier --write '**/*.{js,css,yml}'",
@@ -15,8 +13,8 @@
     "build": "node ./build.js",
     "watch": "nodemon --ignore dist ./build.js",
     "version": "npm run build",
-    "release": "np --contents dist",
-    "release-beta": "np --tag=beta --contents=dist",
+    "release": "np",
+    "release-beta": "np --tag=beta",
     "types": "tsc"
   },
   "license": "MIT",
@@ -59,14 +57,11 @@
     "typescript": "^5.4.5"
   },
   "ava": {
-    "files": [
-      "test/test-*.js"
-    ],
-    "require": [
-      "@babel/register"
-    ]
+    "files": ["test/test-*.js"],
+    "require": ["@babel/register"]
   },
   "np": {
+    "contents": "dist",
     "releaseDraft": false
   }
 }
