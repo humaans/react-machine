@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 - Replace Babel with SWC for test transpilation, reducing dev dependencies significantly.
 
