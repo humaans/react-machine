@@ -4,9 +4,11 @@
   "description": "A lightweight state machine for React applications",
   "types": "types",
   "sideEffects": false,
-  "files": ["*"],
+  "files": [
+    "*"
+  ],
   "scripts": {
-    "test": "healthier && prettier --check '**/*.{js,css,yml}' && ava && npm run package-check",
+    "test": "oxlint && prettier --check '**/*.{js,css,yml}' && ava && npm run package-check",
     "format": "prettier --write '**/*.{js,css,yml}'",
     "package-check": "npm run build && cd dist && package-check",
     "coverage": "c8 --reporter=html ava",
@@ -39,26 +41,30 @@
     "react": "^17.0.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.24.5",
-    "@babel/core": "^7.24.5",
-    "@babel/plugin-transform-modules-commonjs": "^7.24.1",
-    "@babel/plugin-transform-react-jsx": "^7.23.4",
-    "@babel/register": "^7.23.7",
+    "@swc-node/register": "^1.10.10",
+    "@swc/core": "^1.11.24",
     "@skypack/package-check": "^0.2.2",
-    "ava": "^6.1.2",
-    "c8": "^9.1.0",
+    "ava": "^5.3.1",
+    "c8": "^11.0.0",
     "esm": "^3.2.25",
-    "execa": "^8.0.1",
-    "healthier": "^7.0.0",
-    "jsdom": "^24.0.0",
-    "prettier": "^3.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "typescript": "^5.4.5"
+    "execa": "^9.6.1",
+    "jsdom": "^28.1.0",
+    "oxlint": "^1.50.0",
+    "prettier": "^3.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.3"
   },
   "ava": {
-    "files": ["test/test-*.js"],
-    "require": ["@babel/register"]
+    "files": [
+      "test/test-*.js"
+    ],
+    "require": [
+      "@swc-node/register"
+    ],
+    "environmentVariables": {
+      "SWCRC": "true"
+    }
   },
   "np": {
     "contents": "./dist",

@@ -1,6 +1,0 @@
-{
-  "extends": "@istanbuljs/nyc-config-babel",
-  "include": [
-    "lib/**.js"
-  ]
-}

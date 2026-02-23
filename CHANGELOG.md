@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Replace Babel with SWC for test transpilation, reducing dev dependencies significantly.
+
 ## 0.4.7
 
 - Fix the release, publish the right directory.
